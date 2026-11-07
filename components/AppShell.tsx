@@ -4,23 +4,52 @@ import clsx from "clsx";
 import { BarChart3, BookOpen, CloudOff, Home, Languages, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
+import { t, type I18nKey } from "@/lib/i18n";
 import { useLibrary } from "./LibraryProvider";
 
-const NAV = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/decks/vocab", label: "Vocabulary", icon: Languages },
-  { href: "/decks/kanji", label: "Kanji", icon: BookOpen },
-  { href: "/stats", label: "Progress", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+const NAV: { href: string; label: I18nKey; icon: typeof Home }[] = [
+  { href: "/", label: "home", icon: Home },
+  { href: "/decks/vocab", label: "vocab", icon: Languages },
+  { href: "/decks/kanji", label: "kanji", icon: BookOpen },
+  { href: "/stats", label: "progress", icon: BarChart3 },
+  { href: "/settings", label: "settings", icon: Settings },
 ];
+
+/** EN / မြန်မာ switch for card meanings and UI labels. */
+export function LangToggle({ className }: { className?: string }) {
+  const { lang, setLang } = useLibrary();
+  return (
+    <div role="group" aria-label="Meaning language" className={clsx("inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold", className)}>
+      {(["en", "my"] as const).map((l) => (
+        <button
+          key={l}
+          type="button"
+          aria-pressed={lang === l}
+          onClick={() => setLang(l)}
+          className={clsx("rounded-md px-2 py-1 transition", lang === l ? "bg-surface text-primary shadow-sm" : "text-muted")}
+        >
+          {l === "en" ? "EN" : <span className="font-my">မြန်မာ</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { pending } = useLibrary();
+  const router = useRouter();
+  const { pending, profile, lang } = useLibrary();
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
-  const studying = path.startsWith("/study");
+  const onboarding = path.startsWith("/onboarding");
+  // Full-screen pages: no navigation chrome.
+  const studying = path.startsWith("/study") || onboarding;
+
+  // New learners pick their level before anything else.
+  useEffect(() => {
+    if (profile && !profile.onboarded && !onboarding) router.replace("/onboarding");
+  }, [profile, onboarding, router]);
 
   return (
     <div className="min-h-dvh md:flex">
@@ -41,10 +70,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 isActive(href) ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-ink",
               )}
             >
-              <Icon size={20} /> {label}
+              <Icon size={20} /> {t(lang, label)}
             </Link>
           ))}
         </nav>
+        <LangToggle className="mx-2 mt-4 self-start" />
         {pending > 0 && <OfflineBadge pending={pending} className="mt-auto" />}
       </aside>
 
@@ -54,7 +84,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur md:hidden">
             <Image src="/logo-mark.png" alt="" width={32} height={32} className="rounded-md" />
             <span className="text-lg font-bold text-primary">Memori</span>
-            {pending > 0 && <OfflineBadge pending={pending} className="ml-auto" />}
+            <LangToggle className="ml-auto" />
+            {pending > 0 && <OfflineBadge pending={pending} />}
           </header>
         )}
         <main className={clsx("mx-auto w-full max-w-5xl flex-1 px-4 py-5 sm:px-6", !studying && "pb-24 md:pb-8")}>{children}</main>
@@ -70,7 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={clsx("flex flex-col items-center gap-0.5 py-2 text-[11px]", isActive(href) ? "text-primary" : "text-muted")}
             >
               <Icon size={22} />
-              {label}
+              {t(lang, label)}
             </Link>
           ))}
         </nav>

@@ -1,3 +1,4 @@
+import { shuffle } from "./random";
 import type { CardType, StudyCard } from "./types";
 
 export type Only = "all" | "due" | "new" | "starred" | "leech";
@@ -46,12 +47,12 @@ export function filterCards(cards: StudyCard[], f: CardFilter, now = new Date())
   });
 }
 
-/** SRS session queue: due cards (most overdue first) then up to `newLimit` new cards. */
-export function srsQueue(cards: StudyCard[], newLimit = 10, now = new Date()): StudyCard[] {
+/** SRS session queue: due cards (most overdue first) then up to `newLimit` new cards, picked at random. */
+export function srsQueue(cards: StudyCard[], newLimit = 10, now = new Date(), rand: () => number = Math.random): StudyCard[] {
   const due = cards
     .filter((c) => isDue(c, now))
     .sort((a, b) => new Date(a.userState!.due_at!).getTime() - new Date(b.userState!.due_at!).getTime());
-  const fresh = cards.filter(isNew).slice(0, newLimit);
+  const fresh = shuffle(cards.filter(isNew), rand).slice(0, newLimit);
   return [...due, ...fresh];
 }
 

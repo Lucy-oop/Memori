@@ -6,7 +6,7 @@ export function card(partial: Partial<Card>): Card {
     id: `c${n++}`, owner_id: null, type: "kanji", term: "?", reading: null, furigana: null,
     meaning_en: [], meaning_my: null, pos: null, onyomi: [], kunyomi: [], stroke_count: null,
     radical: null, similar: [], similar_note: null, example_jp: null, example_en: null,
-    example_my: null, notes: null, jlpt_level: 5, tags: [], ...partial,
+    example_my: null, notes: null, jlpt_level: 5, tags: [], image_url: null, image_credit: null, ...partial,
   };
 }
 

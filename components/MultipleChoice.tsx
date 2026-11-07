@@ -1,5 +1,6 @@
 "use client";
 
+import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -118,8 +119,7 @@ export function MultipleChoice({
             <span lang="ja" className="font-jp text-lg">{card.term}</span>{" "}
             {card.reading && <span lang="ja" className="font-jp text-muted">（{card.reading}）</span>}
             {card.type === "kanji" && <span lang="ja" className="font-jp text-muted"> {[...card.onyomi, ...card.kunyomi].join("、")}</span>}
-            <span> — {card.meaning_en.join("; ")}</span>
-            {card.meaning_my && <span lang="my" className="font-my"> · {card.meaning_my}</span>}
+            <span> — </span><MeaningText card={card} />
           </Panel>
           <Button className="w-full" onClick={onNext}>Next <kbd className="text-xs opacity-70">Enter</kbd></Button>
         </div>

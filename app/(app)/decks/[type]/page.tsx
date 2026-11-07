@@ -1,5 +1,7 @@
 "use client";
 
+import { MeaningText } from "@/components/MeaningText";
+import { LEVELS } from "@/lib/levels";
 import clsx from "clsx";
 import { Download, FolderPlus, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
@@ -191,7 +193,7 @@ function DeckBrowser() {
           />
         </div>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          {[5, 4, 3].map((l) => (
+          {LEVELS.map((l) => (
             <Chip key={l} active={levels.includes(l)} onClick={() => toggleIn("level", levels, l)}>#N{l}</Chip>
           ))}
           {tagOptions.map((t) => (
@@ -301,8 +303,7 @@ function CardTile({
           {!selecting && <StarButton card={card} />}
         </div>
       </div>
-      <p className="mt-1 line-clamp-2 text-sm">{card.meaning_en.slice(0, 3).join("; ")}</p>
-      {card.meaning_my && <p lang="my" className="line-clamp-1 font-my text-sm text-muted">{card.meaning_my}</p>}
+      <p className="mt-1 line-clamp-2 text-sm"><MeaningText card={card} max={3} /></p>
       <div className="mt-2 flex items-center gap-1">
         <LevelBadge level={card.jlpt_level} />
         {card.similar.length > 0 && <span className="rounded-md bg-warn/15 px-1.5 py-0.5 text-xs text-warn">≈ {card.similar.slice(0, 3).join("")}</span>}

@@ -21,8 +21,11 @@ JLPT N5/N4 kanji & vocabulary flashcards, inspired by Quizlet. Works on phone, t
 
 1. **Supabase:** create a free project at [supabase.com](https://supabase.com/dashboard), then in the **SQL Editor** run, in order:
    - `supabase/migrations/0001_init.sql`
-   - `supabase/seed.sql`
-2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email magic links work out of the box. To enable Google sign-in, turn on the Google provider.
+   - `supabase/migrations/0002_curriculum.sql` (course days, progress, language, images, admin import)
+   - every file in `supabase/seed/`, **in filename order** (`01_cards.sql`, `02_cards.sql`, … `NN_units.sql`, then any `NN_meaning_my.sql`). The seed is split so each file fits the SQL Editor's size limit. Re-running is safe: it upserts and never overwrites Burmese meanings you've reviewed.
+   - Make yourself admin (to import Soumatome lists at `/admin/units`):
+     `update public.profiles set is_admin = true where id = (select id from auth.users where email = 'you@example.com');`
+2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email + password and magic links work out of the box (Authentication → Providers → Email). Password-reset links also go through `/auth/callback`. To enable Google sign-in, turn on the Google provider.
 3. **Env:** `cp .env.example .env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
 4. Run:
    ```bash
@@ -53,9 +56,11 @@ Other columns: `pos, onyomi, kunyomi, stroke_count, radical, example_jp, example
 | `npm run dev` | dev server |
 | `npm run build` | production build |
 | `npm test` | unit tests (SRS, distractors, answer checking, streaks, filters, CSV, furigana) |
-| `npm run seed:build` | regenerate `supabase/seed.sql` from the open datasets and `scripts/seed/data/similar-kanji.json` |
+| `npm run images:fetch -- --level 5 --limit 100` | add Pixabay pictures to vocab cards (needs `SUPABASE_SECRET_KEY` + `PIXABAY_API_KEY` in `.env.local`; local only) |
+| `npm run seed:translate` | draft Burmese meanings for built-in cards with Claude (Batches API; needs `ANTHROPIC_API_KEY`), saved to `scripts/seed/data/meaning-my.json`; then `npm run seed:build` |
+| `npm run seed:build` | regenerate `supabase/seed/*.sql` from the open datasets and `scripts/seed/data/similar-kanji.json` |
 
-To add more similar-kanji groups, edit `scripts/seed/data/similar-kanji.json`, run `npm run seed:build`, and re-run `seed.sql`. It upserts, so your progress is kept.
+To add more similar-kanji groups, edit `scripts/seed/data/similar-kanji.json`, run `npm run seed:build`, and re-run the `supabase/seed/*_cards.sql` files. They upsert, so your progress is kept.
 
 ## Project layout
 

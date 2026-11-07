@@ -1,5 +1,7 @@
 "use client";
 
+import { MeaningText } from "@/components/MeaningText";
+import { LEVELS } from "@/lib/levels";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
@@ -89,7 +91,7 @@ export default function StatsPage() {
           <Panel key={type} className="p-4">
             <h2 className="mb-3 font-semibold">{type === "kanji" ? "Kanji" : "Vocabulary"} by level</h2>
             <div className="space-y-3">
-              {[5, 4, 3].map((level) => {
+              {LEVELS.map((level) => {
                 const set = cards.filter((c) => c.type === type && c.jlpt_level === level);
                 if (!set.length) return null;
                 const counts = Object.fromEntries(BUCKETS.map((b) => [b.key, 0])) as Record<MasteryBucket, number>;
@@ -122,7 +124,7 @@ export default function StatsPage() {
             {missed.map((c) => (
               <Link key={c.id} href={`/cards/edit?id=${c.id}`} className="flex items-center gap-3 rounded-xl border border-line p-2 hover:bg-surface-2">
                 <span lang="ja" className="font-jp text-2xl">{c.term}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{c.meaning_en[0]}</span>
+                <MeaningText card={c} max={1} className="min-w-0 flex-1 truncate text-sm" />
                 <span className="text-xs text-bad">✗{c.userState!.wrong_count}</span>
               </Link>
             ))}

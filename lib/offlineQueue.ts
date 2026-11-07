@@ -15,6 +15,8 @@ export interface QueuedReview {
   p_reps: number | null;
   p_lapses: number | null;
   p_reviewed_at: string;
+  /** Owner of the review. Never sent to the server; used so one account's queue can't post to another. */
+  user_id?: string;
 }
 
 const KEY = "memori:review-queue";
@@ -25,21 +27,31 @@ export async function enqueue(review: QueuedReview): Promise<void> {
   await set(KEY, q);
 }
 
-export async function pendingCount(): Promise<number> {
-  return (((await get(KEY)) as QueuedReview[] | undefined) ?? []).length;
-}
-
 let flushing: Promise<number> | null = null;
 
-/** Send queued reviews one by one; stops at the first failure. Returns how many were sent. */
-export function flush(send: (r: QueuedReview) => Promise<void>): Promise<number> {
+/** Reviews queued by `userId` (legacy entries without an owner count as theirs). */
+export async function pendingCount(userId?: string): Promise<number> {
+  const q = ((await get(KEY)) as QueuedReview[] | undefined) ?? [];
+  return userId ? q.filter((r) => !r.user_id || r.user_id === userId).length : q.length;
+}
+
+/**
+ * Send the signed-in user's queued reviews one by one; stops at the first failure.
+ * Reviews queued by other accounts on this device stay queued for when they sign back in.
+ * Returns how many were sent.
+ */
+export function flush(userId: string, send: (r: QueuedReview) => Promise<void>): Promise<number> {
   flushing ??= (async () => {
     let sent = 0;
     try {
       const q = ((await get(KEY)) as QueuedReview[] | undefined) ?? [];
-      while (q.length) {
-        await send(q[0]);
-        q.shift();
+      const mine = (r: QueuedReview) => !r.user_id || r.user_id === userId;
+      for (let i = 0; i < q.length; ) {
+        if (!mine(q[i])) { i++; continue; }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { user_id, ...payload } = q[i];
+        await send(payload);
+        q.splice(i, 1);
         sent++;
         await set(KEY, q);
       }

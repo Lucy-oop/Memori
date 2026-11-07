@@ -1,4 +1,5 @@
-import type { Card } from "./types";
+import { shuffle } from "./random";
+import { meaningsOf, type Card, type MeaningLang } from "./types";
 
 export type McDirection = "term-meaning" | "meaning-term" | "term-reading";
 
@@ -17,23 +18,14 @@ export function primaryReading(c: Card): string {
   return (c.kunyomi[0] ?? c.onyomi[0] ?? "").replace(/[.\-]/g, "");
 }
 
-export function primaryMeaning(c: Card): string {
-  return c.meaning_en.slice(0, 2).join(", ");
+export function primaryMeaning(c: Card, lang: MeaningLang = "en"): string {
+  return meaningsOf(c, lang).slice(0, 2).join(lang === "my" && c.meaning_my ? "၊ " : ", ");
 }
 
-function answerFor(c: Card, dir: McDirection): string {
-  if (dir === "term-meaning") return primaryMeaning(c);
+function answerFor(c: Card, dir: McDirection, lang: MeaningLang = "en"): string {
+  if (dir === "term-meaning") return primaryMeaning(c, lang);
   if (dir === "meaning-term") return c.term;
   return primaryReading(c);
-}
-
-function shuffle<T>(arr: T[], rand: () => number): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 const sharesKanji = (a: string, b: string) => [...a].some((ch) => /\p{Script=Han}/u.test(ch) && b.includes(ch));
@@ -52,17 +44,24 @@ export function buildQuestion<C extends Card>(
   direction: McDirection,
   rand: () => number = Math.random,
   count = 4,
+  lang: MeaningLang = "en",
 ): McQuestion<C> {
-  const answer = answerFor(card, direction);
+  // Use Burmese only when this card has it, and then only Burmese distractors —
+  // mixing languages would give the answer away.
+  const usesMeaning = direction !== "term-reading";
+  const qLang: MeaningLang = lang === "my" && card.meaning_my?.trim() ? "my" : "en";
+  const answer = answerFor(card, direction, qLang);
   const seen = new Set([answer]);
   const picked: string[] = [];
   const trapOptions: string[] = [];
 
-  const others = pool.filter((c) => c.id !== card.id && c.type === card.type);
+  const others = pool.filter(
+    (c) => c.id !== card.id && c.type === card.type && (!usesMeaning || qLang === "en" || !!c.meaning_my?.trim()),
+  );
   const take = (cands: Card[], trap = false) => {
     for (const c of shuffle(cands, rand)) {
       if (picked.length >= count - 1) return;
-      const text = answerFor(c, direction);
+      const text = answerFor(c, direction, qLang);
       if (!text || seen.has(text)) continue;
       seen.add(text);
       picked.push(text);
@@ -87,6 +86,6 @@ export function buildQuestion<C extends Card>(
   take(others);
 
   const options = shuffle([answer, ...picked], rand);
-  const prompt = direction === "meaning-term" ? primaryMeaning(card) : card.term;
+  const prompt = direction === "meaning-term" ? primaryMeaning(card, qLang) : card.term;
   return { card, direction, prompt, options, answerIndex: options.indexOf(answer), trapOptions };
 }

@@ -16,11 +16,12 @@ import {
   type StudyMode,
 } from "./types";
 import type { DayActivity } from "./streak";
+import type { Position, Track, Unit } from "./curriculum";
 
 const db = () => supabaseBrowser();
 const PAGE = 1000;
 
-async function currentUserId(): Promise<string> {
+export async function currentUserId(): Promise<string> {
   const { data } = await db().auth.getSession();
   const id = data.session?.user.id;
   if (!id) throw new Error("Not signed in");
@@ -173,14 +174,23 @@ export async function recordReview(
     if (!navigator.onLine) throw new Error("offline");
     await sendReview(payload);
   } catch {
-    await enqueue(payload);
+    const user_id = await currentUserId().catch(() => undefined);
+    await enqueue({ ...payload, user_id });
   }
   return schedule
     ? { fsrs: schedule.fsrs, due_at: schedule.dueAt, state: schedule.state, reps: schedule.reps, lapses: schedule.lapses }
     : {};
 }
 
-export const flushOfflineReviews = () => flush(sendReview);
+export async function flushOfflineReviews(): Promise<number> {
+  const uid = await currentUserId().catch(() => null);
+  return uid ? flush(uid, sendReview) : 0;
+}
+
+/** Keep the offline library cache in step with in-session progress. */
+export function saveLibraryCache(cards: StudyCard[]): Promise<void> {
+  return set("memori:library", cards).catch(() => {});
+}
 
 // ───────────── decks ─────────────
 
@@ -240,6 +250,47 @@ export async function addCardsToDeck(deckId: string, cardIds: string[]): Promise
   if (error) throw error;
 }
 
+// ───────────── course ─────────────
+
+/** All study days with their card ids, in no particular order (see lib/curriculum for ordering). */
+export async function loadUnits(): Promise<Unit[]> {
+  return cached("memori:units", async () => {
+    const out: Unit[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await db()
+        .from("units")
+        .select("id, level, track, week, day, title, source, unit_cards(card_id, position)")
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      for (const u of data ?? []) {
+        const uc = (u.unit_cards as { card_id: string; position: number }[]).sort((a, b) => a.position - b.position);
+        out.push({
+          id: u.id, level: u.level, track: u.track as Track, week: u.week, day: u.day,
+          title: u.title, source: u.source as Unit["source"], card_ids: uc.map((x) => x.card_id),
+        });
+      }
+      if (!data || data.length < PAGE) return out;
+    }
+  });
+}
+
+export async function loadProgress(): Promise<Position[]> {
+  return cached("memori:progress", async () => {
+    const { data, error } = await db().from("user_progress").select("track, level, week, day");
+    if (error) throw error;
+    return (data ?? []) as Position[];
+  });
+}
+
+export async function saveProgress(pos: Position): Promise<void> {
+  const user_id = await currentUserId();
+  const { error } = await db()
+    .from("user_progress")
+    .upsert({ user_id, ...pos, updated_at: new Date().toISOString() }, { onConflict: "user_id,track" });
+  if (error) throw error;
+  set("memori:progress", undefined).catch(() => {});
+}
+
 // ───────────── profile & activity ─────────────
 
 export async function loadProfile(): Promise<Profile> {
@@ -247,7 +298,7 @@ export async function loadProfile(): Promise<Profile> {
     const id = await currentUserId();
     const { data, error } = await db()
       .from("profiles")
-      .select("id, display_name, timezone, daily_goal, furigana_default")
+      .select("id, display_name, timezone, daily_goal, furigana_default, onboarded, meaning_lang, is_admin")
       .eq("id", id)
       .single();
     if (error) throw error;
@@ -255,7 +306,7 @@ export async function loadProfile(): Promise<Profile> {
   });
 }
 
-export async function updateProfile(patch: Partial<Omit<Profile, "id">>): Promise<void> {
+export async function updateProfile(patch: Partial<Omit<Profile, "id" | "is_admin">>): Promise<void> {
   const id = await currentUserId();
   const { error } = await db().from("profiles").update(patch).eq("id", id);
   if (error) throw error;
@@ -275,8 +326,11 @@ export async function loadActivity(sinceDay: string): Promise<DayActivity[]> {
 }
 
 export async function signOut(): Promise<void> {
+  // Try to deliver queued reviews while we still have this user's session.
+  // Anything left stays tagged with this user and is never sent from another account.
+  if (navigator.onLine) await flushOfflineReviews().catch(() => 0);
   await db().auth.signOut();
-  await Promise.all(["memori:library", "memori:decks", "memori:profile", "memori:activity"].map((k) => set(k, undefined)));
+  await Promise.all(["memori:library", "memori:decks", "memori:profile", "memori:activity", "memori:units", "memori:progress"].map((k) => set(k, undefined)));
 }
 
 export type { CardType };
