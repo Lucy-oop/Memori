@@ -241,7 +241,7 @@ async function main() {
  * (every generated statement ends with ";" followed by a blank line).
  */
 function splitStatements(text: string): string[] {
-  const statements = text.split(/;\n\n/).map((st) => st.trim()).filter((st) => st && !/^(--[^\n]*\n?)+$/.test(st));
+  const statements = text.split(/;\n\n/).map((st) => st.trim().replace(/;+$/, "")).filter((st) => st && !/^(--[^\n]*\n?)+$/.test(st));
   const parts: string[] = [];
   let cur = "";
   for (const st of statements) {

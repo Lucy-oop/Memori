@@ -3066,5 +3066,5 @@ select u.id, c.id, v.pos from (values
 ) v(week, day, term, reading, pos)
 join public.units u on u.level = 2 and u.track = 'kanji' and u.week = v.week and u.day = v.day and u.source = 'auto'
 join public.cards c on c.owner_id is null and c.type = 'kanji' and c.term = v.term and coalesce(c.reading, '') = v.reading
-on conflict do nothing;;
+on conflict do nothing;
 

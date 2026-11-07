@@ -118,5 +118,5 @@ on conflict (type, term, coalesce(reading, '')) where owner_id is null do update
   meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,
   stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,
   example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,
-  meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);;
+  meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);
 
