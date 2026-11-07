@@ -1,13 +1,13 @@
 "use client";
 
-import { BookOpen, ChevronsRight, Flame, GraduationCap, Keyboard, Languages, ListChecks, Play, Shuffle, Sparkles, Target, X } from "lucide-react";
+import { AlertTriangle, BookOpen, ChevronsRight, Flame, GraduationCap, Keyboard, Languages, ListChecks, Play, Shuffle, Sparkles, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
 import { Button, Panel, Spinner } from "@/components/ui";
 import { currentUnit, dayStats, levelProgress, nextPosition, trackType, unitLabel, unlockedUnits, type Position, type Track } from "@/lib/curriculum";
 import { loadActivity } from "@/lib/data";
-import { isDue, isNew, mastery } from "@/lib/filters";
+import { isDue, isMistake, isNew, mastery } from "@/lib/filters";
 import { t, tf } from "@/lib/i18n";
 import { LEVELS } from "@/lib/levels";
 import { addDays, currentStreak, todayIn, type DayActivity } from "@/lib/streak";
@@ -75,6 +75,8 @@ export default function Dashboard() {
           </div>
         </Panel>
       </div>
+
+      <MistakesChip />
 
       <FirstVisitTip />
 
@@ -157,6 +159,20 @@ function Hero() {
         </Link>
       </div>
     </Panel>
+  );
+}
+
+/** Shortcut to the mistakes notebook, shown only when there's something to fix. */
+function MistakesChip() {
+  const { cards, loading, lang } = useLibrary();
+  const n = useMemo(() => (loading ? 0 : cards.filter(isMistake).length), [cards, loading]);
+  if (!n) return null;
+  return (
+    <Link href="/mistakes" className="flex items-center gap-3 rounded-2xl border border-bad/30 bg-bad/10 p-3 text-sm font-medium">
+      <AlertTriangle size={18} className="text-bad" />
+      <span className="flex-1">{tf(lang, "mistakesChip", { n })}</span>
+      <span className="text-muted">›</span>
+    </Link>
   );
 }
 

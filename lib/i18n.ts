@@ -53,6 +53,15 @@ const en = {
   tipTitle: "How it works",
   tipBody: "Tap a card to flip it, then rate how well you knew it. Cards you miss come back sooner.",
   gotIt: "Got it",
+  mistakes: "Mistakes",
+  mistakesTitle: "Words to fix",
+  mistakesSub: "Cards you've missed at least as often as you got right. Practise them until they drop off this list.",
+  mistakesChip: "{n} words to fix",
+  mistakesEmpty: "No mistakes yet — nice work!",
+  mistakesEmptySub: "Words you get wrong in reviews and quizzes will show up here.",
+  practiceFlash: "Flashcards",
+  practiceQuiz: "Quiz me",
+  wrongRight: "✗ {w} · ✓ {r}",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -106,6 +115,14 @@ const my: Partial<Record<I18nKey, string>> = {
   tipTitle: "အသုံးပြုပုံ",
   tipBody: "ကတ်ကို နှိပ်ပြီး လှန်ပါ၊ ထို့နောက် ဘယ်လောက်သိသလဲ အဆင့်သတ်မှတ်ပါ။ မှားသောကတ်များ မကြာမီ ပြန်ပေါ်လာပါမည်။",
   gotIt: "နားလည်ပါပြီ",
+  mistakes: "အမှားများ",
+  mistakesTitle: "ပြင်ရမည့် စကားလုံးများ",
+  mistakesSub: "မှန်သလောက် မှားခဲ့သော ကတ်များ။ ဤစာရင်းမှ ပျောက်သွားသည်အထိ လေ့ကျင့်ပါ။",
+  mistakesChip: "ပြင်ရမည့် စကားလုံး {n} ခု",
+  mistakesEmpty: "အမှား မရှိသေးပါ — တော်ပါတယ်!",
+  mistakesEmptySub: "ပြန်လေ့ကျင့်ခြင်းနှင့် ဉာဏ်စမ်းတွင် မှားသော စကားလုံးများ ဤနေရာတွင် ပေါ်ပါမည်။",
+  practiceFlash: "ကတ်များ",
+  practiceQuiz: "ဉာဏ်စမ်းမည်",
 };
 
 /** t() with {placeholders}, e.g. tf(lang, "heroReview", { n: 12 }). */

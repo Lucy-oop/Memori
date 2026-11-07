@@ -28,6 +28,11 @@ describe("filterCards", () => {
     expect(filterCards(all, { only: "starred" })).toEqual([a]);
     expect(filterCards(all, { only: "leech" })).toEqual([c]);
   });
+  it("mistakes = leeches plus cards missed at least as often as answered right", () => {
+    const missedOnce = sc({ term: "x1" }, { wrong_count: 1, right_count: 1 });
+    const recovered = sc({ term: "x2" }, { wrong_count: 1, right_count: 3 });
+    expect(filterCards([...all, missedOnce, recovered], { only: "mistakes" })).toEqual([c, missedOnce]);
+  });
   it("searches term, reading and meaning", () => {
     expect(filterCards(all, { search: "meet" })).toEqual([c]);
     expect(filterCards(all, { search: "あう" })).toEqual([c]);

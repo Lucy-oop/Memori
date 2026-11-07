@@ -116,7 +116,10 @@ export default function StatsPage() {
       </div>
 
       <Panel className="p-4">
-        <h2 className="mb-3 font-semibold">Most missed</h2>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="font-semibold">Most missed</h2>
+          <Link href="/mistakes" className="text-sm text-primary underline">See all & practise →</Link>
+        </div>
         {missed.length === 0 ? (
           <p className="text-sm text-muted">Nothing yet — keep studying!</p>
         ) : (
