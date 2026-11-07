@@ -1,26 +1,138 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Brand tokens — taken from the Memori logo: torii green on warm cream, rainbow card stack. */
+:root {
+  --bg: #f6f3ea;
+  --surface: #fffdf8;
+  --surface-2: #efeadc;
+  --ink: #1b2a21;
+  --muted: #5f6b62;
+  --line: #e2dccb;
+  --primary: #1e5b36;
+  --primary-ink: #ffffff;
+  --primary-soft: #dcebe0;
+  --good: #2e8b57;
+  --bad: #c2410c;
+  --warn: #b7791f;
+  --star: #e0a526;
+  --rainbow: linear-gradient(90deg, #2e8b57 0%, #f2a33a 35%, #ec5d8a 65%, #8b5cf6 100%);
+  --shadow: 0 1px 2px rgb(27 42 33 / 0.06), 0 8px 24px rgb(27 42 33 / 0.08);
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #0f1712;
+    --surface: #17221b;
+    --surface-2: #1f2c24;
+    --ink: #e8efe9;
+    --muted: #9aa89f;
+    --line: #2a3a30;
+    --primary: #58b07b;
+    --primary-ink: #0b1a10;
+    --primary-soft: #1f3a29;
+    --good: #4cc27f;
+    --bad: #f0844f;
+    --warn: #e0b04a;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root[data-theme="dark"] {
+  --bg: #0f1712;
+  --surface: #17221b;
+  --surface-2: #1f2c24;
+  --ink: #e8efe9;
+  --muted: #9aa89f;
+  --line: #2a3a30;
+  --primary: #58b07b;
+  --primary-ink: #0b1a10;
+  --primary-soft: #1f3a29;
+  --good: #4cc27f;
+  --bad: #f0844f;
+  --warn: #e0b04a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
 }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --color-star: var(--star);
+  --font-sans: var(--font-inter), var(--font-jp), var(--font-my), system-ui, sans-serif;
+  --font-jp: var(--font-jp), "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-my: var(--font-my), "Myanmar Text", sans-serif;
+  --shadow-card: var(--shadow);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bg-rainbow { background: var(--rainbow); }
+.text-rainbow {
+  background: var(--rainbow);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Furigana */
+ruby rt {
+  font-size: 0.42em;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.furigana-hidden rt { visibility: hidden; }
+
+/* 3D flashcard flip */
+.flip-scene { perspective: 1400px; }
+.flip-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.flip-card.is-flipped { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back { transform: rotateY(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-card { transition: none; }
+}
+
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.input {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0 0.75rem;
+  color: var(--ink);
+  outline: none;
+}
+.input:focus { border-color: var(--primary); }
+.input:disabled { background: var(--surface-2); color: var(--muted); }

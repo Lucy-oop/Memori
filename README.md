@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Memori (メモリ)
 
-## Getting Started
+JLPT N5/N4 kanji & vocabulary flashcards, inspired by Quizlet. Works on phone, tablet and desktop, and installs as an app (PWA).
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Vocabulary & Kanji decks:** 245 N5/N4 kanji and about 1,380 N5/N4 words preloaded, plus your own cards
+- **3D flip flashcards:** tap or press Space to flip; swipe or use ← → for "Know it" / "Still learning"
+- **Furigana toggle:** a global switch plus a per-card "peek reading" button
+- **English + Burmese meanings:** add your own Burmese to any built-in card; it's saved just for you
+- **Similar Kanji warning:** look-alikes such as 待 / 持 / 特 side by side, with a note on how to tell them apart (about 50 groups hand-curated)
+- **SRS review:** Again / Hard / Good / Easy (keys 1–4), scheduled with FSRS
+- **Kanji Trap quiz:** four-option multiple choice whose wrong answers come from the Similar Kanji field first
+- **Typing mode:** type the meaning (English or Burmese) or the reading; romaji converts to kana as you type (`matsu` → まつ)
+- **Mark for review (★)**, plus filters by `#N5` / `#N4` / `#Soumatome` / custom tags, Due / New / Starred / Tricky, and your own decks
+- **Daily streak**, daily goal, activity heatmap and stats
+- **CSV import/export:** for example, type up your So-matome N3 words and import them tagged `#Soumatome`
+- **Works offline:** reviews made offline sync automatically when you're back online
+
+## Setup
+
+1. **Supabase:** create a free project at [supabase.com](https://supabase.com/dashboard), then in the **SQL Editor** run, in order:
+   - `supabase/migrations/0001_init.sql`
+   - `supabase/seed.sql`
+2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email magic links work out of the box. To enable Google sign-in, turn on the Google provider.
+3. **Env:** `cp .env.example .env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
+4. Run:
+   ```bash
+   npm install
+   npm run dev     # http://localhost:3000
+   ```
+   To try it on your phone, open `http://<your-computer-ip>:3000` on the same Wi-Fi, and add that URL to the Supabase redirect URLs too.
+
+### Deploy (Vercel)
+Import the repo into Vercel, add the two env vars, and add `https://<your-app>.vercel.app/auth/callback` to the Supabase redirect URLs.
+
+## CSV format
+
+The header row is required, and only `term` is mandatory. Separate list fields with `;`.
+
+```csv
+type,term,reading,meaning_en,meaning_my,jlpt_level,tags,similar,similar_note
+vocab,締め切り,しめきり,deadline,နောက်ဆုံးရက်,N3,Soumatome Week1,,
+kanji,待,,wait,စောင့်,N4,Soumatome,持;特,待 has 彳; 持 has 扌
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other columns: `pos, onyomi, kunyomi, stroke_count, radical, example_jp, example_en, example_my, notes`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| command | what it does |
+|---|---|
+| `npm run dev` | dev server |
+| `npm run build` | production build |
+| `npm test` | unit tests (SRS, distractors, answer checking, streaks, filters, CSV, furigana) |
+| `npm run seed:build` | regenerate `supabase/seed.sql` from the open datasets and `scripts/seed/data/similar-kanji.json` |
 
-## Learn More
+To add more similar-kanji groups, edit `scripts/seed/data/similar-kanji.json`, run `npm run seed:build`, and re-run `seed.sql`. It upserts, so your progress is kept.
 
-To learn more about Next.js, take a look at the following resources:
+## Project layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/(app)/            signed-in pages: dashboard, decks/[type], study, cards/edit, stats, settings
+app/login, auth/      magic link + Google sign-in
+components/           Flashcard, SimilarKanjiPanel, MultipleChoice, TypingQuiz, StreakHeatmap…
+lib/                  srs (ts-fsrs), distractors, answerCheck, streak, filters, furigana, csv, data, offlineQueue
+supabase/             schema + RLS + record_review(), generated seed
+scripts/seed/         seed builder
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Credits
+Kanji data © EDRDG (KANJIDIC2, CC BY-SA 4.0) via davidluzgouveia/kanji-data. Vocabulary lists via jamsinclair/open-anki-jlpt-decks (MIT). Stroke order © KanjiVG (CC BY-SA 3.0). Memori includes no content from the So-matome books.
