@@ -37,6 +37,22 @@ const en = {
   levelN4: "Elementary",
   levelN3: "Intermediate",
   levelN2: "Upper-intermediate",
+  greeting: "Welcome back",
+  heroLearn: "Start {unit}",
+  heroContinue: "Continue {unit}",
+  heroReview: "Review {n} cards",
+  heroDone: "All done for today 🎉",
+  heroDoneSub: "Come back tomorrow, or keep going with a random review.",
+  practiceAnyway: "Practice anyway",
+  heroLearnSub: "{n} new {what} today, then a quick review.",
+  heroReviewSub: "Cards due from today and earlier days.",
+  dayStreak: "day streak",
+  goalToday: "today's goal",
+  more: "More",
+  morePractice: "More practice",
+  tipTitle: "How it works",
+  tipBody: "Tap a card to flip it, then rate how well you knew it. Cards you miss come back sooner.",
+  gotIt: "Got it",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -74,7 +90,28 @@ const my: Partial<Record<I18nKey, string>> = {
   levelN4: "အခြေခံ အဆင့်မြင့်",
   levelN3: "အလယ်အလတ်",
   levelN2: "အလယ်အလတ် အဆင့်မြင့်",
+  greeting: "ပြန်လည်ကြိုဆိုပါသည်",
+  heroLearn: "{unit} စတင်မည်",
+  heroContinue: "{unit} ဆက်လေ့လာမည်",
+  heroReview: "ကတ် {n} ခု ပြန်လေ့ကျင့်မည်",
+  heroDone: "ယနေ့အတွက် ပြီးပါပြီ 🎉",
+  heroDoneSub: "မနက်ဖြန် ပြန်လာပါ၊ သို့မဟုတ် ကျပန်း ပြန်လေ့ကျင့်ပါ။",
+  practiceAnyway: "ဆက်လေ့ကျင့်မည်",
+  heroLearnSub: "ယနေ့ {what} အသစ် {n} ခု၊ ပြီးလျှင် အမြန် ပြန်လေ့ကျင့်ပါ။",
+  heroReviewSub: "ယနေ့နှင့် ယခင်နေ့များမှ ပြန်လေ့ကျင့်ရမည့် ကတ်များ။",
+  dayStreak: "ရက်ဆက်တိုက်",
+  goalToday: "ယနေ့ ပန်းတိုင်",
+  more: "နောက်ထပ်",
+  morePractice: "နောက်ထပ် လေ့ကျင့်ခန်း",
+  tipTitle: "အသုံးပြုပုံ",
+  tipBody: "ကတ်ကို နှိပ်ပြီး လှန်ပါ၊ ထို့နောက် ဘယ်လောက်သိသလဲ အဆင့်သတ်မှတ်ပါ။ မှားသောကတ်များ မကြာမီ ပြန်ပေါ်လာပါမည်။",
+  gotIt: "နားလည်ပါပြီ",
 };
+
+/** t() with {placeholders}, e.g. tf(lang, "heroReview", { n: 12 }). */
+export function tf(lang: MeaningLang, k: I18nKey, vars: Record<string, string | number>): string {
+  return t(lang, k).replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ""));
+}
 
 export function t(lang: MeaningLang, k: I18nKey): string {
   return (lang === "my" ? my[k] : undefined) ?? en[k];
