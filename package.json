@@ -10,7 +10,8 @@
     "test": "vitest run",
     "seed:build": "tsx scripts/seed/build.ts",
     "images:fetch": "tsx scripts/images/fetch-pixabay.ts",
-    "seed:translate": "tsx scripts/seed/translate-my.ts"
+    "seed:translate": "tsx scripts/seed/translate-my.ts",
+    "seed:examples": "tsx scripts/seed/examples.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

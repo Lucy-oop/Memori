@@ -58,6 +58,7 @@ Other columns: `pos, onyomi, kunyomi, stroke_count, radical, example_jp, example
 | `npm test` | unit tests (SRS, distractors, answer checking, streaks, filters, CSV, furigana) |
 | `npm run images:fetch -- --level 5 --limit 100` | add Pixabay pictures to vocab cards (needs `SUPABASE_SECRET_KEY` + `PIXABAY_API_KEY` in `.env.local`; local only) |
 | `npm run seed:translate` | draft Burmese meanings for built-in cards with Claude (Batches API; needs `ANTHROPIC_API_KEY`), saved to `scripts/seed/data/meaning-my.json`; then `npm run seed:build` |
+| `npm run seed:examples -- --limit 20` | draft one example sentence (JP + EN + Burmese) per vocab card with Claude (Batches API; needs `ANTHROPIC_API_KEY`), saved to `scripts/seed/data/examples.json`; then `npm run seed:build` and run the new `supabase/seed/*_examples.sql` files (they only fill cards without an example). Drop `--limit` for all ~5,300 words; `--level 5` does one level |
 | `npm run seed:build` | regenerate `supabase/seed/*.sql` from the open datasets and `scripts/seed/data/similar-kanji.json` |
 
 To add more similar-kanji groups, edit `scripts/seed/data/similar-kanji.json`, run `npm run seed:build`, and re-run the `supabase/seed/*_cards.sql` files. They upsert, so your progress is kept.

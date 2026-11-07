@@ -203,7 +203,7 @@ insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my",
 on conflict (type, term, coalesce(reading, '')) where owner_id is null do update set
   meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,
   stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,
-  example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,
+  example_jp = coalesce(excluded.example_jp, public.cards.example_jp), jlpt_level = excluded.jlpt_level, tags = excluded.tags,
   meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);
 
 insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my", "onyomi", "kunyomi", "stroke_count", "similar", "similar_note", "example_jp", "jlpt_level", "tags") values
@@ -410,7 +410,7 @@ insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my",
 on conflict (type, term, coalesce(reading, '')) where owner_id is null do update set
   meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,
   stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,
-  example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,
+  example_jp = coalesce(excluded.example_jp, public.cards.example_jp), jlpt_level = excluded.jlpt_level, tags = excluded.tags,
   meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);
 
 insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my", "onyomi", "kunyomi", "stroke_count", "similar", "similar_note", "example_jp", "jlpt_level", "tags") values
@@ -617,7 +617,7 @@ insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my",
 on conflict (type, term, coalesce(reading, '')) where owner_id is null do update set
   meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,
   stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,
-  example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,
+  example_jp = coalesce(excluded.example_jp, public.cards.example_jp), jlpt_level = excluded.jlpt_level, tags = excluded.tags,
   meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);
 
 insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my", "onyomi", "kunyomi", "stroke_count", "similar", "similar_note", "example_jp", "jlpt_level", "tags") values
@@ -824,6 +824,6 @@ insert into public.cards ("type", "term", "reading", "meaning_en", "meaning_my",
 on conflict (type, term, coalesce(reading, '')) where owner_id is null do update set
   meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,
   stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,
-  example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,
+  example_jp = coalesce(excluded.example_jp, public.cards.example_jp), jlpt_level = excluded.jlpt_level, tags = excluded.tags,
   meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);
 
