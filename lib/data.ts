@@ -298,7 +298,8 @@ export async function loadProfile(): Promise<Profile> {
     const id = await currentUserId();
     const { data, error } = await db()
       .from("profiles")
-      .select("id, display_name, timezone, daily_goal, furigana_default, onboarded, meaning_lang, is_admin")
+      // "*" so the app keeps working before migration 0003 (reminder_time) has been run.
+      .select("*")
       .eq("id", id)
       .single();
     if (error) throw error;

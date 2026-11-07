@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/about", "/setup"];
+const PUBLIC_PATHS = ["/login", "/auth", "/about", "/setup", "/api/reminders"];
 const ONBOARDED_COOKIE = "memori-onboarded";
 
 export async function middleware(request: NextRequest) {

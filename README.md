@@ -22,10 +22,11 @@ JLPT N5/N4 kanji & vocabulary flashcards, inspired by Quizlet. Works on phone, t
 1. **Supabase:** create a free project at [supabase.com](https://supabase.com/dashboard), then in the **SQL Editor** run, in order:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_curriculum.sql` (course days, progress, language, images, admin import)
-   - every file in `supabase/seed/`, **in filename order** (`01_cards.sql`, `02_cards.sql`, … `NN_units.sql`, then any `NN_meaning_my.sql`). The seed is split so each file fits the SQL Editor's size limit. Re-running is safe: it upserts and never overwrites Burmese meanings you've reviewed.
+   - `supabase/migrations/0003_reminders.sql` (daily reminder push subscriptions)
+   - every file in `supabase/seed/`, **in filename order** (`01_cards.sql`, `02_cards.sql`, … `NN_units.sql`, then any `NN_meaning_my.sql` / `NN_examples.sql`). The seed is split so each file fits the SQL Editor's size limit. Re-running is safe: it upserts and never overwrites Burmese meanings you've reviewed.
    - Make yourself admin (to import Soumatome lists at `/admin/units`):
      `update public.profiles set is_admin = true where id = (select id from auth.users where email = 'you@example.com');`
-2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email + password and magic links work out of the box (Authentication → Providers → Email). Password-reset links also go through `/auth/callback`. To enable Google sign-in, turn on the Google provider.
+2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email + password and magic links work out of the box (Authentication → Providers → Email). For a one-step sign-up, turn **off "Confirm email"** there: new accounts are then signed in immediately. Password-reset links also go through `/auth/callback`. To enable Google sign-in, turn on the Google provider.
 3. **Env:** `cp .env.example .env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
 4. Run:
    ```bash
@@ -36,6 +37,21 @@ JLPT N5/N4 kanji & vocabulary flashcards, inspired by Quizlet. Works on phone, t
 
 ### Deploy (Vercel)
 Import the repo into Vercel, add the two env vars, and add `https://<your-app>.vercel.app/auth/callback` to the Supabase redirect URLs.
+
+### Daily reminders (optional)
+Web Push notifications at a time each user picks in Settings, sent only if they haven't studied that day.
+1. Run `supabase/migrations/0003_reminders.sql`.
+2. Generate keys: `npx web-push generate-vapid-keys`. In Vercel (and `.env.local`) set `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` or `https://` contact), `CRON_SECRET` (any long random string, e.g. `openssl rand -hex 24`) and `SUPABASE_SECRET_KEY`. All but the public key are **server-only** — never prefix them with `NEXT_PUBLIC_`.
+3. In Supabase → Database → Extensions enable `pg_cron` and `pg_net`, then in the SQL Editor schedule the sender every 15 minutes:
+   ```sql
+   select cron.schedule('memori-reminders', '*/15 * * * *', $cron$
+     select net.http_post(
+       url     := 'https://<your-app>.vercel.app/api/reminders',
+       headers := jsonb_build_object('Authorization', 'Bearer <your CRON_SECRET>')
+     );
+   $cron$);
+   ```
+4. Reminders need the service worker, so they work on the deployed app (or `npm run build && npm start`), not `npm run dev`. On iPhone/iPad they only work after **Add to Home Screen** (iOS 16.4+).
 
 ## CSV format
 

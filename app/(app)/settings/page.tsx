@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
+import { ReminderSettings } from "@/components/ReminderSettings";
 import { Button, Panel, Segmented, Spinner } from "@/components/ui";
 import { signOut, updateProfile } from "@/lib/data";
 import { currentUnit, unitLabel } from "@/lib/curriculum";
@@ -114,6 +115,8 @@ export default function SettingsPage() {
         </label>
         <Button onClick={save}>{saved ? "Saved ✓" : "Save"}</Button>
       </Panel>
+
+      <ReminderSettings />
 
       <Panel className="flex items-center justify-between p-4">
         <span>Appearance</span>
