@@ -94,7 +94,7 @@ export default function OnboardingPage() {
             ))}
           </div>
           {levelsWithUnits.length === 0 && (
-            <p className="text-sm text-bad">No course days found. Run the database migration and seed_units.sql first (see README).</p>
+            <p className="text-sm text-bad">No course days found. Run the database migrations and the files in supabase/seed/ first (see README).</p>
           )}
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setStep(0)}><ArrowLeft size={18} /></Button>

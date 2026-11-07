@@ -7,8 +7,8 @@
  *   1. npm run seed:build                 → writes scripts/seed/.cache/rows.json (the word list)
  *   2. npm run seed:translate             → submits a batch, waits (usually < 1 h), saves results to
  *                                           scripts/seed/data/meaning-my.json (commit this file)
- *   3. npm run seed:build                 → writes supabase/seed_meaning_my.sql
- *   4. Run seed_meaning_my.sql in the Supabase SQL editor (fills only empty Burmese meanings).
+ *   3. npm run seed:build                 → writes supabase/seed/NN_meaning_my.sql files
+ *   4. Run those files in the Supabase SQL editor (they fill only empty Burmese meanings).
  *
  * Interrupted while waiting? Re-run with:  npm run seed:translate -- --batch msgbatch_...
  * Words that failed or were refused are simply left out; re-running translates only what's missing.
@@ -177,7 +177,7 @@ async function collect(client: Anthropic, state: State) {
   saveTranslations(translations);
   console.log(`Saved ${added} Burmese meanings to ${outFile} (${Object.keys(translations).length} total).`);
   if (problems.length) console.log(`Not translated (re-run to retry):\n  ${problems.join("\n  ")}`);
-  console.log("Next: npm run seed:build, then run supabase/seed_meaning_my.sql in Supabase.");
+  console.log("Next: npm run seed:build, then run the supabase/seed/*_meaning_my.sql files in Supabase.");
 }
 
 async function main() {

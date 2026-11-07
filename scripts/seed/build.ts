@@ -8,7 +8,7 @@
  *
  * Run: npm run seed:build
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Papa from "papaparse";
@@ -16,9 +16,12 @@ import { toKatakana } from "wanakana";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cacheDir = join(here, ".cache");
-const outFile = join(here, "../../supabase/seed.sql");
-const unitsFile = join(here, "../../supabase/seed_units.sql");
-const myFile = join(here, "../../supabase/seed_meaning_my.sql");
+/**
+ * Output: numbered files in supabase/seed/, each small enough for the Supabase SQL Editor
+ * (which rejects very large queries). Run them in filename order.
+ */
+const seedDir = join(here, "../../supabase/seed");
+const MAX_FILE_BYTES = 150_000;
 /** Burmese meanings (machine-translated draft, see translate-my.ts), keyed by `type|term|reading`. */
 const translationsFile = join(here, "data/meaning-my.json");
 /** Word list handed to translate-my.ts. */
@@ -205,18 +208,52 @@ async function main() {
       "  meaning_en = excluded.meaning_en, onyomi = excluded.onyomi, kunyomi = excluded.kunyomi,",
       '  stroke_count = excluded.stroke_count, "similar" = excluded."similar", similar_note = excluded.similar_note,',
       "  example_jp = excluded.example_jp, jlpt_level = excluded.jlpt_level, tags = excluded.tags,",
-      "  meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my); -- never overwrite reviewed Burmese",
+      "  meaning_my = coalesce(public.cards.meaning_my, excluded.meaning_my);", // never overwrite reviewed Burmese
       "",
     );
   }
-  writeFileSync(outFile, lines.join("\n"));
-  writeFileSync(unitsFile, buildUnits(rows));
-  writeFileSync(myFile, buildMeaningMy(rows));
+  // Fresh output directory each build so stale parts never linger.
+  if (existsSync(seedDir)) for (const f of readdirSync(seedDir)) if (f.endsWith(".sql")) rmSync(join(seedDir, f));
+  mkdirSync(seedDir, { recursive: true });
+  let n = 0;
+  const files: string[] = [];
+  for (const [kind, text] of [
+    ["cards", lines.join("\n")],
+    ["units", buildUnits(rows)],
+    ["meaning_my", buildMeaningMy(rows)],
+  ] as const) {
+    for (const part of splitStatements(text)) {
+      const name = `${String(++n).padStart(2, "0")}_${kind}.sql`;
+      writeFileSync(join(seedDir, name), `-- ${name}: run the files in supabase/seed/ in filename order.\n${part}`);
+      files.push(name);
+    }
+  }
+  const outFile = `${seedDir}/ (${files.length} files)`;
 
   const count = (t: string, l: number) => rows.filter((r) => r.type === t && r.jlpt_level === l).length;
   console.log(`wrote ${outFile}`);
   console.log(`  Burmese meanings: ${rows.filter((r) => r.meaning_my).length}/${rows.length}`);
   for (const t of ["kanji", "vocab"]) console.log(`  ${t}: ${LEVELS.map((l) => `N${l} ${count(t, l)}`).join(", ")}`);
+}
+
+/**
+ * Split generated SQL into chunks under MAX_FILE_BYTES, only at statement boundaries
+ * (every generated statement ends with ";" followed by a blank line).
+ */
+function splitStatements(text: string): string[] {
+  const statements = text.split(/;\n\n/).map((st) => st.trim()).filter((st) => st && !/^(--[^\n]*\n?)+$/.test(st));
+  const parts: string[] = [];
+  let cur = "";
+  for (const st of statements) {
+    const piece = `${st};\n\n`;
+    if (cur && Buffer.byteLength(cur + piece) > MAX_FILE_BYTES) {
+      parts.push(cur);
+      cur = "";
+    }
+    cur += piece;
+  }
+  if (cur) parts.push(cur);
+  return parts;
 }
 
 /** Key shared with translate-my.ts and data/meaning-my.json. */

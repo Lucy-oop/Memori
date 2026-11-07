@@ -10,7 +10,7 @@ export default function SetupPage() {
       <h1 className="text-2xl font-bold">Connect Memori to Supabase</h1>
       <ol className="list-decimal space-y-3 pl-5 text-ink/90">
         <li>Create a free project at <a className="text-primary underline" href="https://supabase.com/dashboard">supabase.com</a>.</li>
-        <li>In <b>SQL Editor</b>, run <code>supabase/migrations/0001_init.sql</code>, then <code>supabase/seed.sql</code> (N5/N4 cards).</li>
+        <li>In <b>SQL Editor</b>, run <code>supabase/migrations/0001_init.sql</code>, then <code>0002_curriculum.sql</code>, then every file in <code>supabase/seed/</code> in filename order (N5–N2 cards and study days).</li>
         <li>
           In <b>Authentication → URL Configuration</b>, add <code>http://localhost:3000/auth/callback</code> (and your deployed URL) to the redirect URLs.
           Optionally enable the <b>Google</b> provider.
