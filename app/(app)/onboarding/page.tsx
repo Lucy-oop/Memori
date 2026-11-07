@@ -1,130 +1,156 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { LangToggle } from "@/components/AppShell";
 import { useLibrary } from "@/components/LibraryProvider";
 import { Button, Panel, Spinner } from "@/components/ui";
 import { courseUnits, startOfLevel, unitLabel, type Position, type Track } from "@/lib/curriculum";
 import { updateProfile } from "@/lib/data";
+import { t, type I18nKey } from "@/lib/i18n";
 import { LEVELS } from "@/lib/levels";
-import type { MeaningLang } from "@/lib/types";
 
-const LEVEL_BLURB: Record<number, string> = {
-  5: "Beginner · basic words & ~80 kanji",
-  4: "Elementary · everyday conversation",
-  3: "Intermediate · Soumatome N3",
-  2: "Upper-intermediate · Soumatome N2",
-};
+const TRACKS: Track[] = ["goi", "kanji"];
 
 /**
- * First-run setup (also reachable from Settings): meaning language → JLPT level →
- * which study day the learner is on for Goi and Kanji.
+ * First-run setup in one screen: tap a level → both tracks start at that level's Day 1 → dashboard.
+ * "I'm already partway through" reveals week/day pickers for learners mid-book.
+ * Also reachable from Settings to change level or day later.
  */
 export default function OnboardingPage() {
   const router = useRouter();
-  const { loading, units, progress, profile, lang, setLang, setPosition, setProfile } = useLibrary();
-  const [step, setStep] = useState(0);
+  const { metaReady, units, progress, profile, lang, setLang, setPosition, setProfile } = useLibrary();
+  const [partway, setPartway] = useState(false);
   const [level, setLevel] = useState<number>(5);
   const [pos, setPos] = useState<Record<Track, Position | null>>({ goi: null, kanji: null });
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<number | "custom" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Start from the learner's saved position when they come back to change it.
+  // Returning users (changing level from Settings) start from where they are.
   useEffect(() => {
     if (progress.goi) setLevel(progress.goi.level);
     setPos({ goi: progress.goi ?? null, kanji: progress.kanji ?? null });
   }, [progress.goi, progress.kanji]);
 
-  const levelsWithUnits = useMemo(() => LEVELS.filter((l) => units.some((u) => u.level === l)), [units]);
+  // Coming back from Settings: show the day pickers straight away so a tap on a level card
+  // isn't the only option (that resets to Day 1).
+  useEffect(() => {
+    if (profile?.onboarded) setPartway(true);
+  }, [profile?.onboarded]);
 
-  if (loading) return <Spinner />;
+  // First visit: default the meaning language to Burmese on Burmese devices.
+  useEffect(() => {
+    if (!profile || profile.onboarded) return;
+    if (localStorage.getItem("memori-lang-chosen")) return;
+    if (navigator.language?.toLowerCase().startsWith("my") && lang !== "my") setLang("my");
+  }, [profile, lang, setLang]);
 
-  const choose = (l: number) => {
-    setLevel(l);
-    // Changing level resets both tracks to day 1 of that level (user can adjust next).
-    setPos({ goi: startOfLevel(units, "goi", l), kanji: startOfLevel(units, "kanji", l) });
-  };
+  const counts = useMemo(() => {
+    const c: Record<number, { goi: number; kanji: number }> = {};
+    for (const u of units) {
+      c[u.level] ??= { goi: 0, kanji: 0 };
+      c[u.level][u.track] += u.card_ids.length;
+    }
+    return c;
+  }, [units]);
+  const levels = LEVELS.filter((l) => counts[l]);
 
-  const finish = async () => {
-    setSaving(true);
+  if (!metaReady) return <Spinner />;
+
+  const save = async (positions: Position[], key: number | "custom") => {
+    setSaving(key);
     setError(null);
     try {
-      for (const track of ["goi", "kanji"] as Track[]) {
-        await setPosition(pos[track] ?? startOfLevel(units, track, level));
-      }
+      for (const p of positions) await setPosition(p);
       await updateProfile({ onboarded: true, meaning_lang: lang });
       if (profile) setProfile({ ...profile, onboarded: true, meaning_lang: lang });
       router.replace("/");
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      setSaving(false);
+      setSaving(null);
     }
   };
 
+  const pickLevel = (l: number) => save(TRACKS.map((tr) => startOfLevel(units, tr, l)), l);
+  const saveCustom = () => save(TRACKS.map((tr) => (pos[tr]?.level === level ? pos[tr]! : startOfLevel(units, tr, level))), "custom");
+
   return (
     <div className="mx-auto max-w-lg space-y-5 py-4">
-      <div className="flex gap-1.5" aria-hidden>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className={clsx("h-1.5 flex-1 rounded-full", i <= step ? "bg-primary" : "bg-line")} />
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{t(lang, "onbTitle")}</h1>
+          <p className="mt-1 text-sm text-muted">{t(lang, "onbSub")}</p>
+        </div>
+        <LangToggle
+          className="shrink-0"
+          onChange={() => {
+            try { localStorage.setItem("memori-lang-chosen", "1"); } catch {}
+          }}
+        />
+      </div>
+
+      {levels.length === 0 && (
+        <p className="text-sm text-bad">No course days found. Run the database migrations and the files in supabase/seed/ first (see README).</p>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        {levels.map((l) => (
+          <button
+            key={l}
+            type="button"
+            disabled={saving !== null}
+            onClick={() => pickLevel(l)}
+            className={clsx(
+              "flex flex-col items-start gap-1 rounded-2xl border border-line bg-surface p-4 text-left transition",
+              "hover:border-primary hover:bg-primary-soft active:scale-[0.98] disabled:opacity-60",
+              saving === l && "border-primary bg-primary-soft",
+            )}
+          >
+            <span className="text-3xl font-bold">N{l}</span>
+            <span className="text-sm font-medium">{t(lang, `levelN${l}` as I18nKey)}</span>
+            <span className="text-xs text-muted">
+              {counts[l].goi.toLocaleString()} {t(lang, "words")} · {counts[l].kanji} {t(lang, "kanjiUnit")}
+            </span>
+            {saving === l && <span className="text-xs font-medium text-primary">{t(lang, "settingUp")}</span>}
+          </button>
         ))}
       </div>
 
-      {step === 0 && (
+      <button
+        type="button"
+        onClick={() => setPartway((v) => !v)}
+        className="flex w-full items-center justify-center gap-1 text-sm text-primary underline"
+        aria-expanded={partway}
+      >
+        {t(lang, "partway")} <ChevronDown size={16} className={clsx("transition", partway && "rotate-180")} />
+      </button>
+
+      {partway && (
         <Panel className="space-y-4 p-5">
-          <h1 className="text-xl font-bold">Which language should meanings be in?</h1>
-          <p className="text-sm text-muted">You can switch any time from the EN / မြန်မာ button at the top.</p>
-          <div className="grid gap-2">
-            {([["en", "English", "meet, see"], ["my", "မြန်မာ", "တွေ့သည်"]] as [MeaningLang, string, string][]).map(([l, name, sample]) => (
-              <Choice key={l} active={lang === l} onClick={() => setLang(l)} title={name} sub={`会う → ${sample}`} />
+          <p className="text-sm text-muted">{t(lang, "partwayHint")}</p>
+          <div className="flex gap-2" role="group" aria-label="Level">
+            {levels.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLevel(l)}
+                aria-pressed={level === l}
+                className={clsx("flex-1 rounded-xl border px-3 py-2 font-semibold", level === l ? "border-primary bg-primary-soft text-primary" : "border-line")}
+              >
+                N{l}
+              </button>
             ))}
           </div>
-          <Button className="w-full" onClick={() => setStep(1)}>Next <ArrowRight size={18} /></Button>
-        </Panel>
-      )}
-
-      {step === 1 && (
-        <Panel className="space-y-4 p-5">
-          <h1 className="text-xl font-bold">Which JLPT level are you studying?</h1>
-          <p className="text-sm text-muted">Easier levels count as learned and will appear in your random reviews.</p>
-          <div className="grid gap-2">
-            {levelsWithUnits.map((l) => (
-              <Choice key={l} active={level === l} onClick={() => choose(l)} title={`N${l}`} sub={LEVEL_BLURB[l]} />
-            ))}
-          </div>
-          {levelsWithUnits.length === 0 && (
-            <p className="text-sm text-bad">No course days found. Run the database migrations and the files in supabase/seed/ first (see README).</p>
-          )}
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setStep(0)}><ArrowLeft size={18} /></Button>
-            <Button
-              className="flex-1"
-              disabled={!levelsWithUnits.length}
-              onClick={() => {
-                if (!pos.goi || pos.goi.level !== level) choose(level);
-                setStep(2);
-              }}
-            >
-              Next <ArrowRight size={18} />
-            </Button>
-          </div>
-        </Panel>
-      )}
-
-      {step === 2 && (
-        <Panel className="space-y-5 p-5">
-          <h1 className="text-xl font-bold">Which day are you on in N{level}?</h1>
-          <p className="text-sm text-muted">
-            Pick the day you&apos;re studying now. Flashcards will mix that day with every earlier day and all easier levels.
-          </p>
-          {(["goi", "kanji"] as Track[]).map((track) => {
+          {TRACKS.map((track) => {
             const days = courseUnits(units, track).filter((u) => u.level === level);
             const cur = pos[track];
             const value = cur && cur.level === level ? `${cur.week}-${cur.day}` : days[0] ? `${days[0].week}-${days[0].day}` : "";
             return (
               <label key={track} className="block space-y-1.5">
-                <span className="font-semibold">{track === "goi" ? "Vocabulary (語彙 Goi)" : "Kanji (漢字)"}</span>
+                <span className="font-semibold">{track === "goi" ? t(lang, "goi") : t(lang, "kanji")}</span>
                 <select
                   className="input"
                   value={value}
@@ -135,7 +161,7 @@ export default function OnboardingPage() {
                 >
                   {days.map((u) => (
                     <option key={u.id} value={`${u.week}-${u.day}`}>
-                      {unitLabel(u)} · {u.card_ids.length} {track === "goi" ? "words" : "kanji"}
+                      {unitLabel(u)} · {u.card_ids.length} {track === "goi" ? t(lang, "words") : t(lang, "kanjiUnit")}
                       {u.source === "soumatome" ? " · Soumatome" : ""}
                     </option>
                   ))}
@@ -143,35 +169,13 @@ export default function OnboardingPage() {
               </label>
             );
           })}
-          {error && <p className="text-sm text-bad">{error}</p>}
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setStep(1)}><ArrowLeft size={18} /></Button>
-            <Button className="flex-1" disabled={saving} onClick={finish}>
-              <Check size={18} /> {saving ? "Saving…" : "Start studying"}
-            </Button>
-          </div>
+          <Button className="w-full" disabled={saving !== null} onClick={saveCustom}>
+            <Check size={18} /> {saving === "custom" ? t(lang, "settingUp") : t(lang, "startStudying")}
+          </Button>
         </Panel>
       )}
-    </div>
-  );
-}
 
-function Choice({ active, onClick, title, sub }: { active: boolean; onClick: () => void; title: string; sub: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={clsx(
-        "flex items-center justify-between rounded-xl border p-4 text-left transition",
-        active ? "border-primary bg-primary-soft" : "border-line bg-surface hover:bg-surface-2",
-      )}
-    >
-      <span>
-        <span className="block text-lg font-semibold">{title}</span>
-        <span className="block text-sm text-muted">{sub}</span>
-      </span>
-      {active && <Check className="text-primary" size={20} />}
-    </button>
+      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+    </div>
   );
 }

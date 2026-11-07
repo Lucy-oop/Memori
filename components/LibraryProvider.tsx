@@ -22,7 +22,10 @@ interface LibraryContext {
   cards: StudyCard[];
   decks: Deck[];
   profile: Profile | null;
+  /** True until the full card library has loaded. */
   loading: boolean;
+  /** Profile, course days and progress are ready (arrives before the cards). */
+  metaReady: boolean;
   error: string | null;
   pending: number;
   byTerm: Map<string, StudyCard>;
@@ -56,6 +59,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [progress, setProgress] = useState<Partial<Record<Track, Position>>>({});
   const [loading, setLoading] = useState(true);
+  const [metaReady, setMetaReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
   const [furigana, setFuriganaState] = useState(true);
@@ -64,9 +68,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     try {
-      const [c, d, p, u, pr] = await Promise.all([loadLibrary(), loadDecks(), loadProfile(), loadUnits(), loadProgress()]);
-      setCards(c);
-      setDecks(d);
+      // Stage 1: small things the first screens need (onboarding, dashboard header).
+      const cardsPromise = Promise.all([loadLibrary(), loadDecks()]);
+      cardsPromise.catch(() => {}); // handled below; avoid an unhandled rejection while stage 1 runs
+      const [p, u, pr] = await Promise.all([loadProfile(), loadUnits(), loadProgress()]);
       setUnits(u);
       setProgress(Object.fromEntries(pr.map((x) => [x.track, x])));
       // New accounts start on UTC — adopt the device timezone so streak days match local midnight.
@@ -81,9 +86,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setFuriganaState(saved === null ? p.furigana_default : saved === "1");
       setLangState(p.meaning_lang ?? "en");
       localStorage.setItem(LANG_KEY, p.meaning_lang ?? "en");
+      setMetaReady(true);
+
+      // Stage 2: the full card library (thousands of rows).
+      const [c, d] = await cardsPromise;
+      setCards(c);
+      setDecks(d);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      setMetaReady(true);
       setLoading(false);
     }
   }, []);
@@ -153,10 +165,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      cards, decks, profile, loading, error, pending, byTerm, reload, patchState, setProfile,
+      cards, decks, profile, loading, metaReady, error, pending, byTerm, reload, patchState, setProfile,
       furigana, setFurigana, units, progress, setPosition, lang, setLang,
     }),
-    [cards, decks, profile, loading, error, pending, byTerm, reload, patchState, furigana, setFurigana, units, progress, setPosition, lang, setLang],
+    [cards, decks, profile, loading, metaReady, error, pending, byTerm, reload, patchState, furigana, setFurigana, units, progress, setPosition, lang, setLang],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

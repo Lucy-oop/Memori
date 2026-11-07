@@ -18,7 +18,7 @@ const NAV: { href: string; label: I18nKey; icon: typeof Home }[] = [
 ];
 
 /** EN / မြန်မာ switch for card meanings and UI labels. */
-export function LangToggle({ className }: { className?: string }) {
+export function LangToggle({ className, onChange }: { className?: string; onChange?: (l: "en" | "my") => void }) {
   const { lang, setLang } = useLibrary();
   return (
     <div role="group" aria-label="Meaning language" className={clsx("inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold", className)}>
@@ -27,7 +27,7 @@ export function LangToggle({ className }: { className?: string }) {
           key={l}
           type="button"
           aria-pressed={lang === l}
-          onClick={() => setLang(l)}
+          onClick={() => { setLang(l); onChange?.(l); }}
           className={clsx("rounded-md px-2 py-1 transition", lang === l ? "bg-surface text-primary shadow-sm" : "text-muted")}
         >
           {l === "en" ? "EN" : <span className="font-my">မြန်မာ</span>}
