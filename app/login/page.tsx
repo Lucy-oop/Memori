@@ -2,9 +2,9 @@
 
 import { Mail } from "lucide-react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Button, Panel } from "@/components/ui";
+import { Button, Panel, Segmented } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -15,25 +15,66 @@ export default function LoginPage() {
   );
 }
 
+type Tab = "signin" | "signup" | "link";
+
 function Login() {
   const params = useSearchParams();
+  const router = useRouter();
   const next = params.get("next") ?? "/";
+  const [tab, setTab] = useState<Tab>("signin");
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(params.get("error") ? "Sign-in link expired or invalid. Please try again." : null);
   const [busy, setBusy] = useState(false);
 
-  const redirectTo = () => `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const redirectTo = (to = next) => `${location.origin}/auth/callback?next=${encodeURIComponent(to)}`;
 
-  const sendLink = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
-    const { error } = await supabaseBrowser().auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
-    setBusy(false);
-    if (error) setError(error.message);
-    else setSent(true);
+    try {
+      await fn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      const auth = supabaseBrowser().auth;
+      if (tab === "signin") {
+        const { error } = await auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        router.replace(next);
+        router.refresh();
+      } else if (tab === "signup") {
+        const { data, error } = await auth.signUp({ email, password, options: { emailRedirectTo: redirectTo("/onboarding") } });
+        if (error) throw error;
+        if (data.session) {
+          router.replace("/onboarding");
+          router.refresh();
+        } else {
+          setSent(`We sent a confirmation link to ${email}. Open it to activate your account.`);
+        }
+      } else {
+        const { error } = await auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
+        if (error) throw error;
+        setSent(`We sent a sign-in link to ${email}. Open it on this device.`);
+      }
+    });
+  };
+
+  const forgot = () =>
+    run(async () => {
+      if (!email) throw new Error("Enter your email first, then tap “Forgot password”.");
+      const { error } = await supabaseBrowser().auth.resetPasswordForEmail(email, { redirectTo: redirectTo("/auth/reset") });
+      if (error) throw error;
+      setSent(`We sent a password reset link to ${email}.`);
+    });
 
   const google = async () => {
     const { error } = await supabaseBrowser().auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectTo() } });
@@ -45,7 +86,7 @@ function Login() {
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center text-center">
           <Image src="/logo-full.png" alt="Memori (メモリ)" width={320} height={179} priority className="rounded-2xl" />
-          <p className="mt-2 text-muted">Kanji &amp; vocabulary flashcards for JLPT N5 · N4</p>
+          <p className="mt-2 text-muted">Kanji &amp; vocabulary flashcards for JLPT N5 · N4 · N3 · N2</p>
         </div>
 
         <Panel className="space-y-4 p-5">
@@ -53,8 +94,8 @@ function Login() {
             <div className="space-y-2 text-center">
               <Mail className="mx-auto text-primary" size={36} />
               <p className="font-semibold">Check your email</p>
-              <p className="text-sm text-muted">We sent a sign-in link to <b>{email}</b>. Open it on this device.</p>
-              <button className="text-sm text-primary underline" onClick={() => setSent(false)}>Use a different email</button>
+              <p className="text-sm text-muted">{sent}</p>
+              <button className="text-sm text-primary underline" onClick={() => setSent(null)}>Back</button>
             </div>
           ) : (
             <>
@@ -63,10 +104,40 @@ function Login() {
                 Continue with Google
               </Button>
               <div className="flex items-center gap-3 text-xs text-muted"><div className="h-px flex-1 bg-line" />or<div className="h-px flex-1 bg-line" /></div>
-              <form onSubmit={sendLink} className="space-y-3">
+
+              <Segmented
+                value={tab}
+                onChange={(v) => { setTab(v); setError(null); }}
+                options={[
+                  { value: "signin", label: "Sign in" },
+                  { value: "signup", label: "Sign up" },
+                  { value: "link", label: "Email link" },
+                ]}
+              />
+
+              <form onSubmit={submit} className="space-y-3">
                 <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="input" autoComplete="email" />
-                <Button type="submit" className="w-full" disabled={busy}>{busy ? "Sending…" : "Email me a sign-in link"}</Button>
+                {tab !== "link" && (
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={tab === "signup" ? "Create a password (8+ characters)" : "Password"}
+                    className="input"
+                    autoComplete={tab === "signup" ? "new-password" : "current-password"}
+                  />
+                )}
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {busy ? "Please wait…" : tab === "signin" ? "Sign in" : tab === "signup" ? "Create account" : "Email me a sign-in link"}
+                </Button>
               </form>
+              {tab === "signin" && (
+                <button type="button" onClick={forgot} disabled={busy} className="block w-full text-center text-sm text-primary underline">
+                  Forgot password?
+                </button>
+              )}
             </>
           )}
           {error && <p className="text-center text-sm text-bad">{error}</p>}

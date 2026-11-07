@@ -1,8 +1,9 @@
 "use client";
 
+import { MeaningText } from "@/components/MeaningText";
 import clsx from "clsx";
 import { motion, useAnimationControls } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Shuffle, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronsRight, RotateCcw, Shuffle, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +16,9 @@ import { Button, Empty, Panel, Segmented, Spinner } from "@/components/ui";
 import type { TypingField } from "@/lib/answerCheck";
 import { recordReview } from "@/lib/data";
 import { buildQuestion, type McDirection } from "@/lib/distractors";
+import { buildSession, currentUnit, nextPosition, unitLabel, type SessionKind, type Track } from "@/lib/curriculum";
 import { filterCards, isDue, srsQueue, type Only } from "@/lib/filters";
+import { shuffle } from "@/lib/random";
 import { gradeForQuiz, type Grade } from "@/lib/srs";
 import type { CardType, StudyCard, StudyMode } from "@/lib/types";
 
@@ -39,15 +42,6 @@ interface Result {
   correct: boolean;
 }
 
-function shuffle<T>(a: T[]): T[] {
-  const b = [...a];
-  for (let i = b.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [b[i], b[j]] = [b[j], b[i]];
-  }
-  return b;
-}
-
 /** Quiz order: due first, then starred, then tricky, then the rest (shuffled within groups). */
 function quizOrder(cards: StudyCard[]): StudyCard[] {
   const rank = (c: StudyCard) =>
@@ -58,11 +52,16 @@ function quizOrder(cards: StudyCard[]): StudyCard[] {
 function Study() {
   const params = useSearchParams();
   const router = useRouter();
-  const { cards, loading, patchState, furigana, setFurigana } = useLibrary();
+  const { cards, loading, patchState, furigana, setFurigana, units, progress, setPosition } = useLibrary();
 
   const mode = (params.get("mode") as StudyMode) ?? "flip";
-  const type = params.get("type") as CardType | null;
-  const [size, setSize] = useState(mode === "flip" ? "all" : "20");
+  // Course sessions: ?course=goi|kanji&session=learn|review — cards come from the learner's unlocked days.
+  const course = params.get("course") as Track | null;
+  const sessionKind = (params.get("session") as SessionKind) ?? "review";
+  const pos = course ? progress[course] : undefined;
+  const unit = pos ? currentUnit(units, pos) : null;
+  const type = (course ? (course === "goi" ? "vocab" : "kanji") : params.get("type")) as CardType | null;
+  const [size, setSize] = useState(mode === "flip" && !course ? "all" : "20");
   const [direction, setDirection] = useState<McDirection | "mix">("mix");
   const [field, setField] = useState<TypingField>("meaning");
   const [sessionKey, setSessionKey] = useState(0);
@@ -92,11 +91,23 @@ function Study() {
   const queue = useMemo(() => {
     if (retry) return retry;
     const n = size === "all" ? Infinity : Number(size);
+    if (course) {
+      if (!pos) return [];
+      return buildSession(cards, units, pos, sessionKind, { size: n === Infinity ? 1000 : n });
+    }
     if (mode === "srs") return srsQueue(deckPool, 10).slice(0, n === Infinity ? 200 : n);
     if (mode === "flip") return shuffle(deckPool).slice(0, n);
     return quizOrder(deckPool).slice(0, n);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckPool.length, mode, size, sessionKey, retry]);
+  }, [deckPool.length, mode, size, sessionKey, retry, course, sessionKind, pos?.level, pos?.week, pos?.day, units.length]);
+
+  const finishDay = pos && course && sessionKind === "learn"
+    ? async () => {
+        const nxt = nextPosition(units, pos);
+        if (nxt) await setPosition(nxt);
+        router.push("/");
+      }
+    : undefined;
 
   if (loading) return <Spinner />;
 
@@ -107,7 +118,10 @@ function Study() {
       <div className="mb-4 flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={back} aria-label="Close session"><X size={20} /></Button>
         <h1 className="font-semibold">{MODE_LABEL[mode]}</h1>
-        <span className="text-sm text-muted">{type === "kanji" ? "· Kanji" : type === "vocab" ? "· Vocabulary" : ""}</span>
+        <span className="text-sm text-muted">
+          {type === "kanji" ? "· Kanji" : type === "vocab" ? "· Vocabulary" : ""}
+          {unit && ` · ${sessionKind === "learn" ? unitLabel(unit) : `Review up to ${unitLabel(unit)}`}`}
+        </span>
         <label className="ml-auto flex cursor-pointer items-center gap-2 text-sm">
           <input type="checkbox" checked={furigana} onChange={(e) => setFurigana(e.target.checked)} className="accent-[var(--primary)]" />
           <span lang="ja" className="font-jp">ふりがな</span>
@@ -115,7 +129,7 @@ function Study() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {mode !== "srs" && (
+        {mode !== "srs" && !(course && sessionKind === "learn") && (
           <Segmented
             value={size}
             onChange={(v) => { setSize(v); setRetry(null); setSessionKey((k) => k + 1); }}
@@ -135,7 +149,12 @@ function Study() {
         )}
       </div>
 
-      {queue.length === 0 ? (
+      {course && !pos ? (
+        <Empty title="Choose your level first">
+          Tell us where you are in the course and we&apos;ll build your sessions from there.
+          <div className="mt-4"><Link href="/onboarding"><Button>Set my level</Button></Link></div>
+        </Empty>
+      ) : queue.length === 0 ? (
         <Empty title={mode === "srs" ? "All caught up! 🎉" : "No cards to study"}>
           {mode === "srs" ? "Nothing is due right now. Come back later or learn with flashcards." : "Change the filters on the deck page."}
           <div className="mt-4"><Link href="/"><Button variant="secondary">Back home</Button></Link></div>
@@ -151,6 +170,7 @@ function Study() {
           onPatch={patchState}
           onRestart={(missed) => { setRetry(missed); setSessionKey((k) => k + 1); }}
           onNew={() => { setRetry(null); setSessionKey((k) => k + 1); }}
+          onFinishDay={finishDay}
         />
       )}
     </div>
@@ -166,6 +186,7 @@ function Session({
   onPatch,
   onRestart,
   onNew,
+  onFinishDay,
 }: {
   mode: StudyMode;
   queue: StudyCard[];
@@ -175,6 +196,7 @@ function Session({
   onPatch: (id: string, patch: Partial<NonNullable<StudyCard["userState"]>>) => void;
   onRestart: (missed: StudyCard[]) => void;
   onNew: () => void;
+  onFinishDay?: () => Promise<void>;
 }) {
   const [queue, setQueue] = useState(initialQueue);
   const [index, setIndex] = useState(0);
@@ -218,13 +240,14 @@ function Session({
     [busy, card, index, next, record],
   );
 
+  const { lang } = useLibrary();
   const question = useMemo(() => {
     if (mode !== "mc" || !card) return null;
     const dirs: McDirection[] = ["term-meaning", "meaning-term", "term-reading"];
     const dir = direction === "mix" ? dirs[Math.floor(Math.random() * dirs.length)] : direction;
-    return buildQuestion(card, distractorPool, dir);
+    return buildQuestion(card, distractorPool, dir, Math.random, 4, lang);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.id, index, mode, direction]);
+  }, [card?.id, index, mode, direction, lang]);
 
   // Keyboard: Space flips; arrows answer in flip mode.
   useEffect(() => {
@@ -254,7 +277,7 @@ function Session({
   };
 
   if (finished) {
-    return <Summary results={results} onRestart={onRestart} onNew={onNew} mode={mode} />;
+    return <Summary results={results} onRestart={onRestart} onNew={onNew} mode={mode} onFinishDay={onFinishDay} />;
   }
 
   const right = results.filter((r) => r.correct).length;
@@ -343,12 +366,15 @@ function Summary({
   mode,
   onRestart,
   onNew,
+  onFinishDay,
 }: {
   results: Result[];
   mode: StudyMode;
   onRestart: (missed: StudyCard[]) => void;
   onNew: () => void;
+  onFinishDay?: () => Promise<void>;
 }) {
+  const [advancing, setAdvancing] = useState(false);
   const right = results.filter((r) => r.correct).length;
   const pct = results.length ? Math.round((right / results.length) * 100) : 0;
   const missed = [...new Map(results.filter((r) => !r.correct).map((r) => [r.card.id, r.card])).values()];
@@ -372,11 +398,21 @@ function Summary({
               <li key={c.id} className="flex items-baseline gap-3 py-2">
                 <span lang="ja" className="font-jp text-xl">{c.term}</span>
                 {c.reading && <span lang="ja" className="font-jp text-sm text-muted">{c.reading}</span>}
-                <span className="truncate text-sm">{c.meaning_en.slice(0, 2).join("; ")}</span>
+                <MeaningText card={c} max={2} className="truncate text-sm" />
               </li>
             ))}
           </ul>
         </Panel>
+      )}
+
+      {onFinishDay && (
+        <Button
+          className="w-full"
+          disabled={advancing}
+          onClick={async () => { setAdvancing(true); await onFinishDay().catch(() => setAdvancing(false)); }}
+        >
+          <ChevronsRight size={18} /> Finish this day &amp; unlock the next
+        </Button>
       )}
 
       <div className="grid gap-2 sm:grid-cols-3">

@@ -23,6 +23,8 @@ export interface Card {
   notes: string | null;
   jlpt_level: number | null;
   tags: string[];
+  image_url: string | null;
+  image_credit: string | null;
 }
 
 /** Personal edits a user keeps on top of a built-in card. */
@@ -54,10 +56,27 @@ export interface Profile {
   timezone: string;
   daily_goal: number;
   furigana_default: boolean;
+  onboarded: boolean;
+  meaning_lang: MeaningLang;
+  is_admin: boolean;
+}
+
+/** Which language card meanings are shown in. */
+export type MeaningLang = "en" | "my";
+
+/**
+ * Meanings in the chosen language. Burmese is a single free-text field (split on ; / 、 / newlines);
+ * falls back to English when a card has no Burmese yet.
+ */
+export function meaningsOf(card: Pick<Card, "meaning_en" | "meaning_my">, lang: MeaningLang): string[] {
+  if (lang === "my" && card.meaning_my?.trim()) {
+    return card.meaning_my.split(/[;\n、]+/).map((m) => m.trim()).filter(Boolean);
+  }
+  return card.meaning_en;
 }
 
 export const CARD_COLUMNS =
-  "id, owner_id, type, term, reading, furigana, meaning_en, meaning_my, pos, onyomi, kunyomi, stroke_count, radical, similar, similar_note, example_jp, example_en, example_my, notes, jlpt_level, tags";
+  "id, owner_id, type, term, reading, furigana, meaning_en, meaning_my, pos, onyomi, kunyomi, stroke_count, radical, similar, similar_note, example_jp, example_en, example_my, notes, jlpt_level, tags, image_url, image_credit";
 
 export function applyOverride(card: Card, state: CardState | null): StudyCard {
   const o = state?.override ?? {};

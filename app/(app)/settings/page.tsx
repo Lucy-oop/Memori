@@ -1,17 +1,18 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { GraduationCap, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
 import { Button, Panel, Segmented, Spinner } from "@/components/ui";
 import { signOut, updateProfile } from "@/lib/data";
+import { currentUnit, unitLabel } from "@/lib/curriculum";
 
 type Theme = "system" | "light" | "dark";
 
 export default function SettingsPage() {
-  const { profile, setProfile, furigana, setFurigana, loading } = useLibrary();
+  const { profile, setProfile, furigana, setFurigana, loading, units, progress, lang, setLang } = useLibrary();
   const router = useRouter();
   const [name, setName] = useState("");
   const [goal, setGoal] = useState(20);
@@ -57,6 +58,30 @@ export default function SettingsPage() {
   return (
     <div className="max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      <Panel className="space-y-4 p-5">
+        <h2 className="flex items-center gap-2 font-semibold"><GraduationCap size={20} /> Course</h2>
+        <ul className="space-y-1 text-sm">
+          {(["goi", "kanji"] as const).map((track) => {
+            const p = progress[track];
+            const u = p ? currentUnit(units, p) : null;
+            return (
+              <li key={track} className="flex justify-between gap-3">
+                <span className="text-muted">{track === "goi" ? "Vocabulary (Goi)" : "Kanji"}</span>
+                <span className="font-medium">{u ? unitLabel(u) : "Not set"}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <Link href="/onboarding"><Button variant="secondary" className="w-full">Change level or day</Button></Link>
+        {profile.is_admin && (
+          <Link href="/admin/units"><Button variant="ghost" className="w-full">Admin · Import Soumatome units</Button></Link>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">Meaning language</span>
+          <Segmented value={lang} onChange={setLang} options={[{ value: "en", label: "English" }, { value: "my", label: "မြန်မာ" }]} />
+        </div>
+      </Panel>
 
       <Panel className="space-y-4 p-4">
         <label className="block space-y-1">

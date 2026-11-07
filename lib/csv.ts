@@ -80,6 +80,8 @@ export function parseCardsCsv(text: string, defaultType: CardType, defaultTags: 
       notes: get("notes"),
       jlpt_level: level >= 1 && level <= 5 ? level : null,
       tags,
+      image_url: get("image_url"),
+      image_credit: null,
     });
   });
   return { cards, errors };

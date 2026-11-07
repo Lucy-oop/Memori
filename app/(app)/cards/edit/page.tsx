@@ -21,6 +21,7 @@ const blank = (type: CardType): CardInput => ({
   type, term: "", reading: null, furigana: null, meaning_en: [], meaning_my: null, pos: null,
   onyomi: [], kunyomi: [], stroke_count: null, radical: null, similar: [], similar_note: null,
   example_jp: null, example_en: null, example_my: null, notes: null, jlpt_level: null, tags: [],
+  image_url: null, image_credit: null,
 });
 
 const toList = (s: string) => s.split(/[;；,、]/).map((x) => x.trim()).filter(Boolean);

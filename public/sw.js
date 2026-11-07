@@ -2,14 +2,17 @@
 // - Static build assets & icons: cache-first (they're content-hashed).
 // - Pages: network-first, falling back to the last cached copy.
 // Card data itself is cached in IndexedDB by the app (lib/data.ts).
-const VERSION = "memori-v1";
+// Bump VERSION on deploys that change cached behaviour; old caches are deleted on activate.
+const VERSION = "memori-v2";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
-const PRECACHE = ["/", "/decks/vocab", "/decks/kanji", "/study", "/stats", "/logo-mark.png", "/icons/icon-192.png"];
+// Only public assets are precached. Signed-in pages are cached as the user visits them (see "navigate" below),
+// so a signed-out install can never store the login redirect under an app URL.
+const PRECACHE = ["/logo-mark.png", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(PAGES).then((c) => Promise.allSettled(PRECACHE.map((u) => c.add(u)))).then(() => self.skipWaiting()),
+    caches.open(STATIC).then((c) => Promise.allSettled(PRECACHE.map((u) => c.add(u)))).then(() => self.skipWaiting()),
   );
 });
 
@@ -26,7 +29,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/auth/")) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/auth/") || url.pathname === "/login") return;
 
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || /\.(png|svg|woff2?)$/.test(url.pathname)) {
     event.respondWith(
@@ -46,7 +49,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok && !res.redirected) caches.open(PAGES).then((c) => c.put(url.pathname, res.clone()));
+          if (res.ok && !res.redirected) caches.open(STATIC).then((c) => c.put(url.pathname, res.clone()));
           return res;
         })
         .catch(() => caches.match(url.pathname).then((hit) => hit || caches.match("/"))),

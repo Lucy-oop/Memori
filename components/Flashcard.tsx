@@ -1,5 +1,6 @@
 "use client";
 
+import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -114,13 +115,19 @@ function Front({ card }: { card: StudyCard }) {
 
 function Meanings({ card }: { card: StudyCard }) {
   return (
-    <div className="space-y-1">
-      <p className="text-xl font-semibold">{card.meaning_en.join("; ")}</p>
-      {card.meaning_my && (
-        <p lang="my" className="font-my text-lg leading-relaxed text-ink/85">
-          {card.meaning_my}
-        </p>
+    <div className="space-y-2">
+      {card.image_url && (
+        // Remote images from Supabase Storage; plain <img> keeps them cacheable offline by the service worker.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={card.image_url}
+          alt=""
+          loading="lazy"
+          className="mx-auto max-h-40 w-auto rounded-xl object-contain"
+          title={card.image_credit ?? undefined}
+        />
       )}
+      <p className="text-xl font-semibold leading-relaxed"><MeaningText card={card} /></p>
     </div>
   );
 }

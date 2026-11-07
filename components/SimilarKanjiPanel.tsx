@@ -1,5 +1,6 @@
 "use client";
 
+import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { AlertTriangle } from "lucide-react";
 import { useLibrary } from "./LibraryProvider";
@@ -36,7 +37,7 @@ export function SimilarKanjiPanel({ card, compact }: { card: StudyCard; compact?
               <span lang="ja" className={clsx("font-jp leading-none", compact ? "text-3xl" : "text-4xl")}>
                 {ch}
               </span>
-              <span className="mt-1 max-w-20 truncate text-[11px] text-muted">{k?.meaning_en[0] ?? ""}</span>
+              <span className="mt-1 max-w-20 truncate text-[11px] text-muted">{k ? <MeaningText card={k} max={1} /> : ""}</span>
             </div>
           );
         })}

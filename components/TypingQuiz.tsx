@@ -1,5 +1,6 @@
 "use client";
 
+import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { bind, unbind } from "wanakana";
@@ -127,8 +128,7 @@ export function TypingQuiz({
               <span lang="ja" className="font-jp">
                 {card.type === "vocab" ? card.reading : [...card.onyomi, ...card.kunyomi].join("、")}
               </span>{" "}
-              — {card.meaning_en.join("; ")}
-              {card.meaning_my && <span lang="my" className="font-my"> · {card.meaning_my}</span>}
+              — <MeaningText card={card} />
             </p>
           </Panel>
           {!result.correct && card.similar.length > 0 && <SimilarKanjiPanel card={card} />}
