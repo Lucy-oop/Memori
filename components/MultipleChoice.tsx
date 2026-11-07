@@ -2,9 +2,10 @@
 
 import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
-import { AlertTriangle, Check, X } from "lucide-react";
+import { AlertTriangle, Check, Volume2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { McQuestion } from "@/lib/distractors";
+import { speak } from "@/lib/speech";
 import type { StudyCard } from "@/lib/types";
 import { FuriganaText } from "./FuriganaText";
 import { useLibrary } from "./LibraryProvider";
@@ -15,6 +16,7 @@ const PROMPT_LABEL = {
   "term-meaning": "What does this mean?",
   "meaning-term": "Which one means…",
   "term-reading": "How do you read this?",
+  "audio-meaning": "Listen — what does it mean?",
 } as const;
 
 /** "Kanji Trap" multiple choice: similar-looking kanji are pulled in as distractors. */
@@ -31,7 +33,13 @@ export function MultipleChoice({
   const [chosen, setChosen] = useState<number | null>(null);
   const answered = chosen !== null;
   const { card } = question;
-  const jpOptions = question.direction !== "term-meaning";
+  const listening = question.direction === "audio-meaning";
+  const jpOptions = question.direction !== "term-meaning" && !listening;
+
+  // Listening quiz: play the word as soon as the question appears.
+  useEffect(() => {
+    if (listening) speak(question.prompt);
+  }, [listening, question.prompt, card.id]);
 
   const choose = (i: number) => {
     if (answered) return;
@@ -60,7 +68,16 @@ export function MultipleChoice({
         <div className="flex items-center gap-2 text-sm text-muted">
           <LevelBadge level={card.jlpt_level} /> {PROMPT_LABEL[question.direction]}
         </div>
-        {question.direction === "meaning-term" ? (
+        {listening ? (
+          <button
+            type="button"
+            onClick={() => speak(question.prompt)}
+            aria-label="Play the word again"
+            className="flex h-28 w-28 items-center justify-center rounded-full bg-primary-soft text-primary transition hover:scale-105 active:scale-95"
+          >
+            <Volume2 size={56} />
+          </button>
+        ) : question.direction === "meaning-term" ? (
           <p className="text-3xl font-semibold">{question.prompt}</p>
         ) : card.type === "vocab" ? (
           <FuriganaText

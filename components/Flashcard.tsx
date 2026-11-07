@@ -3,7 +3,8 @@
 import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { Eye, EyeOff } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { speak } from "@/lib/speech";
 import type { StudyCard } from "@/lib/types";
 import { FuriganaText } from "./FuriganaText";
 import { useLibrary } from "./LibraryProvider";
@@ -28,6 +29,12 @@ export function Flashcard({
   onFlip: () => void;
   className?: string;
 }) {
+  const { autoplay } = useLibrary();
+  // Auto-play pronunciation when the answer side is revealed (Settings → Auto-play).
+  useEffect(() => {
+    if (flipped && autoplay) speak(card.type === "vocab" ? (card.reading ?? card.term) : card.term);
+  }, [flipped, autoplay, card.id, card.type, card.reading, card.term]);
+
   return (
     <div className={clsx("flip-scene h-[min(62vh,480px)] w-full", className)}>
       <div

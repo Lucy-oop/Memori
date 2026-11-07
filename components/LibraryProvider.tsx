@@ -38,6 +38,9 @@ interface LibraryContext {
   units: Unit[];
   progress: Partial<Record<Track, Position>>;
   setPosition: (pos: Position) => Promise<void>;
+  /** Speak the word automatically when a flashcard is flipped. */
+  autoplay: boolean;
+  setAutoplay: (v: boolean) => void;
   /** Language card meanings are shown in. */
   lang: MeaningLang;
   setLang: (l: MeaningLang) => void;
@@ -51,6 +54,7 @@ const emptyState = (card_id: string): CardState => ({
 });
 
 const LANG_KEY = "memori-lang";
+const AUTOPLAY_KEY = "memori-autoplay";
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -64,6 +68,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState(0);
   const [furigana, setFuriganaState] = useState(true);
   const [lang, setLangState] = useState<MeaningLang>("en");
+  const [autoplay, setAutoplayState] = useState(false);
   const dirty = useRef(false);
 
   const reload = useCallback(async () => {
@@ -104,6 +109,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     // Show the remembered language immediately, before the profile arrives.
     const l = localStorage.getItem(LANG_KEY);
     if (l === "en" || l === "my") setLangState(l);
+    setAutoplayState(localStorage.getItem(AUTOPLAY_KEY) === "1");
 
     const sync = async () => {
       await flushOfflineReviews();
@@ -145,6 +151,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("memori-furigana", v ? "1" : "0");
   }, []);
 
+  const setAutoplay = useCallback((v: boolean) => {
+    setAutoplayState(v);
+    try { localStorage.setItem(AUTOPLAY_KEY, v ? "1" : "0"); } catch {}
+  }, []);
+
   const setLang = useCallback((l: MeaningLang) => {
     setLangState(l);
     localStorage.setItem(LANG_KEY, l);
@@ -166,9 +177,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       cards, decks, profile, loading, metaReady, error, pending, byTerm, reload, patchState, setProfile,
-      furigana, setFurigana, units, progress, setPosition, lang, setLang,
+      furigana, setFurigana, units, progress, setPosition, lang, setLang, autoplay, setAutoplay,
     }),
-    [cards, decks, profile, loading, metaReady, error, pending, byTerm, reload, patchState, furigana, setFurigana, units, progress, setPosition, lang, setLang],
+    [cards, decks, profile, loading, metaReady, error, pending, byTerm, reload, patchState, furigana, setFurigana, units, progress, setPosition, lang, setLang, autoplay, setAutoplay],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

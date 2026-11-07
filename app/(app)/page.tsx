@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BookOpen, ChevronsRight, Flame, GraduationCap, Keyboard, Languages, ListChecks, Play, Shuffle, Sparkles, Target, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Volume2, ChevronsRight, Flame, GraduationCap, Keyboard, Languages, ListChecks, Play, Shuffle, Sparkles, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
@@ -277,6 +277,11 @@ function CourseTrack({ track }: { track: Track }) {
           <div className="grid grid-cols-2 gap-2">
             <Link href={studyHref(track, "mc", "review")}><Button variant="secondary" size="sm" className="w-full"><ListChecks size={16} /> {t(lang, "quiz")}</Button></Link>
             <Link href={studyHref(track, "type", "review")}><Button variant="secondary" size="sm" className="w-full"><Keyboard size={16} /> {t(lang, "typing")}</Button></Link>
+            {track === "goi" && (
+              <Link href={`${studyHref(track, "mc", "review")}&dir=audio-meaning`} className="col-span-2">
+                <Button variant="secondary" size="sm" className="w-full"><Volume2 size={16} /> {t(lang, "listening")}</Button>
+              </Link>
+            )}
           </div>
           {info.next ? (
             <Button

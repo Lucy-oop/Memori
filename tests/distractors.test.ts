@@ -40,3 +40,14 @@ describe("buildQuestion", () => {
     expect(q.options.filter((o) => o === "wait")).toHaveLength(1);
   });
 });
+
+describe("listening questions", () => {
+  it("prompts with the reading and asks for the meaning", () => {
+    const word = { ...card({ type: "vocab", term: "会う", reading: "あう", meaning_en: ["to meet"] }) };
+    const others = ["見る", "行く", "来る", "食べる"].map((t, i) => card({ type: "vocab", term: t, reading: t, meaning_en: [`m${i}`] }));
+    const q = buildQuestion(word, [word, ...others], "audio-meaning", seeded(4));
+    expect(q.prompt).toBe("あう");
+    expect(q.options[q.answerIndex]).toBe("to meet");
+    expect(q.options).toHaveLength(4);
+  });
+});
