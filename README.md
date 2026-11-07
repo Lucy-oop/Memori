@@ -24,6 +24,7 @@ JLPT N5/N4 kanji & vocabulary flashcards, inspired by Quizlet. Works on phone, t
    - `supabase/migrations/0002_curriculum.sql` (course days, progress, language, images, admin import)
    - `supabase/seed.sql` (N5–N2 kanji & vocabulary — large; if the editor times out, run it with `psql`)
    - `supabase/seed_units.sql` (auto-split Week/Day study days for every level)
+   - `supabase/seed_meaning_my.sql` (Burmese meanings, once generated — see `npm run seed:translate`)
    - Make yourself admin (to import Soumatome lists at `/admin/units`):
      `update public.profiles set is_admin = true where id = (select id from auth.users where email = 'you@example.com');`
 2. **Auth:** in Authentication → URL Configuration, set the Site URL and add `http://localhost:3000/auth/callback` (plus your production URL) to the Redirect URLs. Email + password and magic links work out of the box (Authentication → Providers → Email). Password-reset links also go through `/auth/callback`. To enable Google sign-in, turn on the Google provider.
@@ -58,6 +59,7 @@ Other columns: `pos, onyomi, kunyomi, stroke_count, radical, example_jp, example
 | `npm run build` | production build |
 | `npm test` | unit tests (SRS, distractors, answer checking, streaks, filters, CSV, furigana) |
 | `npm run images:fetch -- --level 5 --limit 100` | add Pixabay pictures to vocab cards (needs `SUPABASE_SECRET_KEY` + `PIXABAY_API_KEY` in `.env.local`; local only) |
+| `npm run seed:translate` | draft Burmese meanings for built-in cards with Claude (Batches API; needs `ANTHROPIC_API_KEY`), saved to `scripts/seed/data/meaning-my.json`; then `npm run seed:build` |
 | `npm run seed:build` | regenerate `supabase/seed.sql` from the open datasets and `scripts/seed/data/similar-kanji.json` |
 
 To add more similar-kanji groups, edit `scripts/seed/data/similar-kanji.json`, run `npm run seed:build`, and re-run `seed.sql`. It upserts, so your progress is kept.
