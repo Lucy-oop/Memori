@@ -3,7 +3,8 @@
 import { MeaningText } from "./MeaningText";
 import clsx from "clsx";
 import { Eye, EyeOff } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { speak } from "@/lib/speech";
 import type { StudyCard } from "@/lib/types";
 import { FuriganaText } from "./FuriganaText";
 import { useLibrary } from "./LibraryProvider";
@@ -28,6 +29,12 @@ export function Flashcard({
   onFlip: () => void;
   className?: string;
 }) {
+  const { autoplay } = useLibrary();
+  // Auto-play pronunciation when the answer side is revealed (Settings → Auto-play).
+  useEffect(() => {
+    if (flipped && autoplay) speak(card.type === "vocab" ? (card.reading ?? card.term) : card.term);
+  }, [flipped, autoplay, card.id, card.type, card.reading, card.term]);
+
   return (
     <div className={clsx("flip-scene h-[min(62vh,480px)] w-full", className)}>
       <div
@@ -133,6 +140,9 @@ function Meanings({ card }: { card: StudyCard }) {
 }
 
 function VocabBack({ card }: { card: StudyCard }) {
+  const { lang } = useLibrary();
+  // Translation in the chosen language; English when the Burmese draft is missing.
+  const exampleTr = lang === "my" && card.example_my ? card.example_my : card.example_en;
   return (
     <div className="flex flex-1 flex-col gap-4 pt-2">
       <div className="text-center">
@@ -144,10 +154,16 @@ function VocabBack({ card }: { card: StudyCard }) {
       </div>
       <div className="text-center"><Meanings card={card} /></div>
       {card.example_jp && (
-        <div className="rounded-xl bg-surface-2 p-3 text-sm">
-          <p lang="ja" className="font-jp text-base">{card.example_jp}</p>
-          {card.example_en && <p className="text-muted">{card.example_en}</p>}
-          {card.example_my && <p lang="my" className="font-my text-muted">{card.example_my}</p>}
+        <div className="flex items-start gap-2 rounded-xl bg-surface-2 p-3 text-sm">
+          <div className="min-w-0 flex-1">
+            <p lang="ja" className="font-jp text-base">{card.example_jp}</p>
+            {exampleTr && (
+              <p lang={exampleTr === card.example_my ? "my" : "en"} className={clsx("text-muted", exampleTr === card.example_my && "font-my")}>
+                {exampleTr}
+              </p>
+            )}
+          </div>
+          <SpeakButton text={card.example_jp} />
         </div>
       )}
       {card.similar.length > 0 && <SimilarKanjiPanel card={card} compact />}

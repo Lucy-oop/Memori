@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
+import { ReminderSettings } from "@/components/ReminderSettings";
 import { Button, Panel, Segmented, Spinner } from "@/components/ui";
 import { signOut, updateProfile } from "@/lib/data";
 import { currentUnit, unitLabel } from "@/lib/curriculum";
@@ -12,7 +13,7 @@ import { currentUnit, unitLabel } from "@/lib/curriculum";
 type Theme = "system" | "light" | "dark";
 
 export default function SettingsPage() {
-  const { profile, setProfile, furigana, setFurigana, loading, units, progress, lang, setLang } = useLibrary();
+  const { profile, setProfile, furigana, setFurigana, loading, units, progress, lang, setLang, autoplay, setAutoplay } = useLibrary();
   const router = useRouter();
   const [name, setName] = useState("");
   const [goal, setGoal] = useState(20);
@@ -105,8 +106,17 @@ export default function SettingsPage() {
           <span>Show furigana by default</span>
           <input type="checkbox" checked={furigana} onChange={(e) => setFurigana(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
         </label>
+        <label className="flex items-center justify-between gap-3">
+          <span>
+            Auto-play pronunciation
+            <span className="block text-xs text-muted">Speaks the word when you flip a flashcard. Saved on this device.</span>
+          </span>
+          <input type="checkbox" checked={autoplay} onChange={(e) => setAutoplay(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
+        </label>
         <Button onClick={save}>{saved ? "Saved ✓" : "Save"}</Button>
       </Panel>
+
+      <ReminderSettings />
 
       <Panel className="flex items-center justify-between p-4">
         <span>Appearance</span>

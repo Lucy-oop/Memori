@@ -19,6 +19,7 @@ import { buildQuestion, type McDirection } from "@/lib/distractors";
 import { buildSession, currentUnit, nextPosition, unitLabel, type SessionKind, type Track } from "@/lib/curriculum";
 import { filterCards, isDue, srsQueue, type Only } from "@/lib/filters";
 import { shuffle } from "@/lib/random";
+import { hasJapaneseVoice } from "@/lib/speech";
 import { gradeForQuiz, type Grade } from "@/lib/srs";
 import type { CardType, StudyCard, StudyMode } from "@/lib/types";
 
@@ -62,7 +63,12 @@ function Study() {
   const unit = pos ? currentUnit(units, pos) : null;
   const type = (course ? (course === "goi" ? "vocab" : "kanji") : params.get("type")) as CardType | null;
   const [size, setSize] = useState(mode === "flip" && !course ? "all" : "20");
-  const [direction, setDirection] = useState<McDirection | "mix">("mix");
+  // ?dir=audio-meaning opens the listening quiz directly (dashboard "Listening" button).
+  const [direction, setDirection] = useState<McDirection | "mix">((params.get("dir") as McDirection | null) ?? "mix");
+  const [noVoice, setNoVoice] = useState(false);
+  useEffect(() => {
+    if (direction === "audio-meaning") hasJapaneseVoice().then((ok) => setNoVoice(!ok));
+  }, [direction]);
   const [field, setField] = useState<TypingField>("meaning");
   const [sessionKey, setSessionKey] = useState(0);
   const [retry, setRetry] = useState<StudyCard[] | null>(null);
@@ -142,7 +148,13 @@ function Study() {
             <option value="term-meaning">Japanese → meaning</option>
             <option value="meaning-term">Meaning → Japanese</option>
             <option value="term-reading">Japanese → reading</option>
+            <option value="audio-meaning">🔊 Listening → meaning</option>
           </select>
+        )}
+        {mode === "mc" && direction === "audio-meaning" && noVoice && (
+          <p className="w-full rounded-xl bg-warn/15 px-3 py-2 text-sm text-warn">
+            This device has no Japanese voice, so listening questions may be silent. Add a Japanese voice in your phone or computer&apos;s speech settings.
+          </p>
         )}
         {mode === "type" && (
           <Segmented value={field} onChange={setField} options={[{ value: "meaning", label: "Type meaning" }, { value: "reading", label: "Type reading" }]} />
@@ -244,7 +256,9 @@ function Session({
   const question = useMemo(() => {
     if (mode !== "mc" || !card) return null;
     const dirs: McDirection[] = ["term-meaning", "meaning-term", "term-reading"];
-    const dir = direction === "mix" ? dirs[Math.floor(Math.random() * dirs.length)] : direction;
+    let dir = direction === "mix" ? dirs[Math.floor(Math.random() * dirs.length)] : direction;
+    // A single kanji has several readings, so "listen" questions only make sense for words.
+    if (dir === "audio-meaning" && card.type === "kanji") dir = "term-meaning";
     return buildQuestion(card, distractorPool, dir, Math.random, 4, lang);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.id, index, mode, direction, lang]);

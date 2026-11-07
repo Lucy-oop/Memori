@@ -59,6 +59,8 @@ export interface Profile {
   onboarded: boolean;
   meaning_lang: MeaningLang;
   is_admin: boolean;
+  /** Local "HH:MM[:SS]" for the daily reminder; null/absent = off (migration 0003). */
+  reminder_time?: string | null;
 }
 
 /** Which language card meanings are shown in. */

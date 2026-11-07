@@ -1,7 +1,8 @@
 import { shuffle } from "./random";
 import { meaningsOf, type Card, type MeaningLang } from "./types";
 
-export type McDirection = "term-meaning" | "meaning-term" | "term-reading";
+/** audio-meaning = listening quiz: hear the reading, pick the meaning. */
+export type McDirection = "term-meaning" | "meaning-term" | "term-reading" | "audio-meaning";
 
 export interface McQuestion<C extends Card = Card> {
   card: C;
@@ -23,7 +24,7 @@ export function primaryMeaning(c: Card, lang: MeaningLang = "en"): string {
 }
 
 function answerFor(c: Card, dir: McDirection, lang: MeaningLang = "en"): string {
-  if (dir === "term-meaning") return primaryMeaning(c, lang);
+  if (dir === "term-meaning" || dir === "audio-meaning") return primaryMeaning(c, lang);
   if (dir === "meaning-term") return c.term;
   return primaryReading(c);
 }
@@ -86,6 +87,7 @@ export function buildQuestion<C extends Card>(
   take(others);
 
   const options = shuffle([answer, ...picked], rand);
-  const prompt = direction === "meaning-term" ? primaryMeaning(card, qLang) : card.term;
+  const prompt =
+    direction === "meaning-term" ? primaryMeaning(card, qLang) : direction === "audio-meaning" ? primaryReading(card) : card.term;
   return { card, direction, prompt, options, answerIndex: options.indexOf(answer), trapOptions };
 }

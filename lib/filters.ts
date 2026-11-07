@@ -1,7 +1,7 @@
 import { shuffle } from "./random";
 import type { CardType, StudyCard } from "./types";
 
-export type Only = "all" | "due" | "new" | "starred" | "leech";
+export type Only = "all" | "due" | "new" | "starred" | "leech" | "mistakes";
 
 export interface CardFilter {
   type?: CardType;
@@ -19,6 +19,11 @@ export const isLeech = (c: StudyCard) => {
   const s = c.userState;
   return !!s && (s.lapses >= 4 || (s.wrong_count >= 4 && s.wrong_count > s.right_count));
 };
+/** Mistakes notebook: leeches, plus any card missed at least as often as it was answered right. */
+export const isMistake = (c: StudyCard) => {
+  const s = c.userState;
+  return !!s && (isLeech(c) || (s.wrong_count > 0 && s.wrong_count >= s.right_count));
+};
 
 const normTag = (t: string) => t.replace(/^#/, "").toLowerCase();
 
@@ -35,6 +40,7 @@ export function filterCards(cards: StudyCard[], f: CardFilter, now = new Date())
       case "new": if (!isNew(c)) return false; break;
       case "starred": if (!c.userState?.starred) return false; break;
       case "leech": if (!isLeech(c)) return false; break;
+      case "mistakes": if (!isMistake(c)) return false; break;
     }
     if (q) {
       const hay = [c.term, c.reading, ...c.meaning_en, c.meaning_my, ...c.onyomi, ...c.kunyomi]
